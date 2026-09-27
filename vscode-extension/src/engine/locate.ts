@@ -50,7 +50,7 @@ function resolveConfiguredPath(target: string, workspaceRoots: string[]): string
 /** Configured interpreter first, then a workspace virtualenv, then PATH. */
 export function findPython(workspaceRoots: string[], configured: string): string {
     const resolvedConfig = resolveConfiguredPath(configured, workspaceRoots);
-    if (resolvedConfig) {
+    if (resolvedConfig && fs.existsSync(resolvedConfig)) {
         return resolvedConfig;
     }
     const relative = process.platform === 'win32' ? WINDOWS_PYTHONS : POSIX_PYTHONS;
