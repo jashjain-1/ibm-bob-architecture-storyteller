@@ -31,12 +31,27 @@ export async function previewDossier(
     client: EngineClient,
     level: DepthLevel
 ): Promise<void> {
-    const html = await client.dossierHtml(level);
-    showDocumentPanel(context, {
-        key: 'dossier',
-        title: `Dossier L${level} ${LEVEL_LABELS[level]}`,
-        bodyHtml: html,
-    });
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: `Generating Architecture Dossier L${level} (${LEVEL_LABELS[level]})...`,
+            cancellable: false,
+        },
+        async () => {
+            try {
+                const html = await client.dossierHtml(level);
+                showDocumentPanel(context, {
+                    key: 'dossier',
+                    title: `Dossier L${level} ${LEVEL_LABELS[level]}`,
+                    bodyHtml: html,
+                });
+            } catch (error) {
+                void vscode.window.showErrorMessage(
+                    `Failed to generate dossier preview: ${String((error as Error).message ?? error)}`
+                );
+            }
+        }
+    );
 }
 
 export async function exportDossier(
@@ -58,9 +73,15 @@ export async function exportDossier(
             saveLabel: 'Save dossier HTML',
         });
         if (target) {
-            const html = await client.dossierHtml(level);
-            await vscode.workspace.fs.writeFile(target, Buffer.from(html, 'utf8'));
-            void vscode.window.showInformationMessage(`Dossier written to ${target.fsPath}`);
+            try {
+                const html = await client.dossierHtml(level);
+                await vscode.workspace.fs.writeFile(target, Buffer.from(html, 'utf8'));
+                void vscode.window.showInformationMessage(`Dossier written to ${target.fsPath}`);
+            } catch (error) {
+                void vscode.window.showErrorMessage(
+                    `Failed to save HTML dossier: ${String((error as Error).message ?? error)}`
+                );
+            }
         }
     }
 }

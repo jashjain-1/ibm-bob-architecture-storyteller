@@ -26,16 +26,18 @@ const POSIX_PYTHONS = [
     '.venv/bin/python',
     'venv/bin/python',
     'env/bin/python',
+    '.conda/bin/python',
 ];
 
 const WINDOWS_PYTHONS = [
     '.venv/Scripts/python.exe',
     'venv/Scripts/python.exe',
     'env/Scripts/python.exe',
+    '.conda/python.exe',
 ];
 
 function resolveConfiguredPath(target: string, workspaceRoots: string[]): string {
-    const trimmed = (target || '').trim();
+    const trimmed = (target || '').trim().replace(/^["']|["']$/g, '');
     if (!trimmed) {
         return '';
     }
@@ -47,12 +49,33 @@ function resolveConfiguredPath(target: string, workspaceRoots: string[]): string
     return expanded;
 }
 
-/** Configured interpreter first, then a workspace virtualenv, then PATH. */
+/** Configured interpreter first, then active env, then workspace virtualenv, then system/PATH. */
 export function findPython(workspaceRoots: string[], configured: string): string {
     const resolvedConfig = resolveConfiguredPath(configured, workspaceRoots);
-    if (resolvedConfig && fs.existsSync(resolvedConfig)) {
+    if (resolvedConfig) {
         return resolvedConfig;
     }
+
+    if (process.env.VIRTUAL_ENV) {
+        const venvPy = path.join(
+            process.env.VIRTUAL_ENV,
+            process.platform === 'win32' ? path.join('Scripts', 'python.exe') : path.join('bin', 'python')
+        );
+        if (fs.existsSync(venvPy)) {
+            return venvPy;
+        }
+    }
+
+    if (process.env.CONDA_PREFIX) {
+        const condaPy = path.join(
+            process.env.CONDA_PREFIX,
+            process.platform === 'win32' ? 'python.exe' : path.join('bin', 'python')
+        );
+        if (fs.existsSync(condaPy)) {
+            return condaPy;
+        }
+    }
+
     const relative = process.platform === 'win32' ? WINDOWS_PYTHONS : POSIX_PYTHONS;
     for (const root of workspaceRoots) {
         for (const candidate of relative) {
@@ -62,7 +85,38 @@ export function findPython(workspaceRoots: string[], configured: string): string
             }
         }
     }
-    return process.platform === 'win32' ? 'python' : 'python3';
+
+    if (process.platform === 'win32') {
+        const localAppData = process.env.LOCALAPPDATA;
+        if (localAppData) {
+            const programsPython = path.join(localAppData, 'Programs', 'Python');
+            if (fs.existsSync(programsPython)) {
+                try {
+                    const entries = fs.readdirSync(programsPython, { withFileTypes: true });
+                    const pythonDirs = entries
+                        .filter(e => e.isDirectory() && /^Python3\d*$/i.test(e.name))
+                        .map(e => e.name)
+                        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+                    for (const dir of pythonDirs) {
+                        const candidate = path.join(programsPython, dir, 'python.exe');
+                        if (fs.existsSync(candidate)) {
+                            return candidate;
+                        }
+                    }
+                } catch {
+                    // Ignore directory read errors
+                }
+            }
+        }
+        const windir = process.env.WINDIR || 'C:\\Windows';
+        const pyLauncher = path.join(windir, 'py.exe');
+        if (fs.existsSync(pyLauncher)) {
+            return pyLauncher;
+        }
+        return 'python';
+    }
+
+    return 'python3';
 }
 
 /**

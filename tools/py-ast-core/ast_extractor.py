@@ -158,7 +158,7 @@ def _extract_python_native(source: str, file_path: str) -> tuple[list[dict], lis
 
     try:
         tree = ast.parse(source, filename=file_path)
-    except SyntaxError:
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
         return symbols, entry_points, edges
 
     import_modules: list[str] = []
@@ -675,12 +675,15 @@ def _extract_file(
     if result is not None:
         return result
 
-    if language == "python":
-        return _extract_python_native(source, rel_path)
-    elif language == "go":
-        return _extract_go_native(source, rel_path)
-    elif language in ("typescript", "javascript"):
-        return _extract_ts_native(source, rel_path, language)
+    try:
+        if language == "python":
+            return _extract_python_native(source, rel_path)
+        elif language == "go":
+            return _extract_go_native(source, rel_path)
+        elif language in ("typescript", "javascript"):
+            return _extract_ts_native(source, rel_path, language)
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        return [], [], []
 
     return [], [], []
 

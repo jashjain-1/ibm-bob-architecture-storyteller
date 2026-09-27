@@ -1,6 +1,7 @@
 {
   "storyteller.enginePath": "tools/storyteller-engine",
-  "storyteller.pythonPath": "",
+  "storyteller.pythonPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "storyteller.enableHover": true,
   "storyteller.defaultDepth": 2
 }

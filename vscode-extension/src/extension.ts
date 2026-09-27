@@ -40,7 +40,16 @@ import { showContext, showUsages } from './views/contextPanel';
 import { showDocumentPanel } from './views/documentPanel';
 import { MapPanel, MapPanelDelegate } from './views/mapPanel';
 import { registerArchitectureHoverProvider } from './views/hoverProvider';
+import { RippleFileDecorationProvider } from './views/fileDecorationProvider';
+import { RippleStatusIndicator } from './views/statusIndicator';
+import { RipplePatchContentProvider } from './views/patchContentProvider';
+import { RippleCodeActionProvider } from './views/codeActionProvider';
+import { registerRippleCommands } from './commands/ripple';
 import { escapeHtml } from './webview/shell';
+
+let fileDecorationProvider: RippleFileDecorationProvider | undefined;
+let rippleStatusIndicator: RippleStatusIndicator | undefined;
+let patchContentProvider: RipplePatchContentProvider | undefined;
 
 let client: EngineClient | undefined;
 let output: vscode.OutputChannel | undefined;
@@ -301,6 +310,8 @@ async function refreshStatus(): Promise<void> {
                 'Click to re-index.',
             ].join('\n\n')
         );
+        void fileDecorationProvider?.refresh();
+        rippleStatusIndicator?.update();
     } catch (error) {
         setStatus('engine offline', String((error as Error).message ?? error), 'storyteller.index');
     }
@@ -492,18 +503,59 @@ export function activate(context: vscode.ExtensionContext): void {
             if (!argument?.file) {
                 return;
             }
-            const root = workspaceRoots()[0] ?? '';
-            const absolute = path.isAbsolute(argument.file) ? argument.file : path.join(root, argument.file);
-            const document = await vscode.workspace.openTextDocument(vscode.Uri.file(absolute));
-            const line = Math.max(0, (argument.line ?? 1) - 1);
-            await vscode.window.showTextDocument(document, {
-                preview: true,
-                selection: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0)),
-            });
+            try {
+                const root = workspaceRoots()[0] ?? '';
+                const absolute = path.isAbsolute(argument.file) ? argument.file : path.join(root, argument.file);
+                const document = await vscode.workspace.openTextDocument(vscode.Uri.file(absolute));
+                const line = Math.max(0, (argument.line ?? 1) - 1);
+                await vscode.window.showTextDocument(document, {
+                    preview: true,
+                    selection: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0)),
+                });
+            } catch (error) {
+                void vscode.window.showErrorMessage(
+                    `Unable to open file ${argument.file}: ${String((error as Error).message ?? error)}`
+                );
+            }
         })
     );
 
     registerArchitectureHoverProvider(context, clientProvider);
+
+    patchContentProvider = new RipplePatchContentProvider();
+    fileDecorationProvider = new RippleFileDecorationProvider(clientProvider);
+    rippleStatusIndicator = new RippleStatusIndicator(fileDecorationProvider);
+
+    context.subscriptions.push(
+        patchContentProvider,
+        fileDecorationProvider,
+        rippleStatusIndicator,
+        vscode.window.registerFileDecorationProvider(fileDecorationProvider),
+        vscode.languages.registerCodeActionsProvider(
+            [{ scheme: 'file' }, { scheme: 'untitled' }],
+            new RippleCodeActionProvider(),
+            { providedCodeActionKinds: RippleCodeActionProvider.providedCodeActionKinds }
+        )
+    );
+
+    registerRippleCommands(context, clientProvider, fileDecorationProvider, patchContentProvider);
+
+    let saveDebounceTimer: NodeJS.Timeout | undefined;
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument(() => {
+            if (saveDebounceTimer) {
+                clearTimeout(saveDebounceTimer);
+            }
+            saveDebounceTimer = setTimeout(async () => {
+                try {
+                    await fileDecorationProvider?.refresh();
+                    rippleStatusIndicator?.update();
+                } catch {
+                    // ignore refresh errors during save
+                }
+            }, 400);
+        })
+    );
 
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration((event) => {
@@ -546,4 +598,10 @@ export function deactivate(): void {
     client = undefined;
     statusItem?.dispose();
     statusItem = undefined;
+    fileDecorationProvider?.dispose();
+    fileDecorationProvider = undefined;
+    rippleStatusIndicator?.dispose();
+    rippleStatusIndicator = undefined;
+    patchContentProvider?.dispose();
+    patchContentProvider = undefined;
 }

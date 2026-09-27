@@ -265,17 +265,23 @@ export class MapPanel {
                 if (!message.file) {
                     break;
                 }
-                const root = this.workspaceRoot();
-                const absolute = path.isAbsolute(message.file) ? message.file : path.join(root, message.file);
-                const document = await vscode.workspace.openTextDocument(vscode.Uri.file(absolute));
-                const line = Math.max(0, (message.line ?? 1) - 1);
-                await vscode.window.showTextDocument(document, {
-                    preview: true,
-                    selection: new vscode.Range(
-                        new vscode.Position(line, 0),
-                        new vscode.Position(line, 0)
-                    ),
-                });
+                try {
+                    const root = this.workspaceRoot();
+                    const absolute = path.isAbsolute(message.file) ? message.file : path.join(root, message.file);
+                    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(absolute));
+                    const line = Math.max(0, (message.line ?? 1) - 1);
+                    await vscode.window.showTextDocument(document, {
+                        preview: true,
+                        selection: new vscode.Range(
+                            new vscode.Position(line, 0),
+                            new vscode.Position(line, 0)
+                        ),
+                    });
+                } catch (error) {
+                    void vscode.window.showErrorMessage(
+                        `Unable to open file ${message.file}: ${String((error as Error).message ?? error)}`
+                    );
+                }
                 break;
             }
             case 'openContext':

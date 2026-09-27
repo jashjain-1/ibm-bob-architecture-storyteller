@@ -186,6 +186,64 @@ def cmd_model(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_dependencies(args: argparse.Namespace) -> int:
+    engine = _engine(args)
+    deps = engine.dependencies()
+    summary = deps["summary"]
+    text_lines = [
+        f"Workspace Blast Radius: {summary['total_files']} files | Green (Safe): {summary['green_count']} | Yellow (Moderate): {summary['yellow_count']} | Red (Hub): {summary['red_count']}\n"
+    ]
+    for fpath, info in sorted(deps["files"].items(), key=lambda x: -x[1]["dependents_count"])[:20]:
+        text_lines.append(f"  [{info['tier'].upper():6}] {fpath} ({info['dependents_count']} dependent file(s))")
+    _print(deps, args.json, "\n".join(text_lines))
+    return 0
+
+
+def cmd_ripple(args: argparse.Namespace) -> int:
+    engine = _engine(args)
+    result = engine.ripple(
+        needle=args.symbol,
+        file=args.file,
+        code=args.code,
+        scenario=args.scenario,
+        custom_amendment=args.custom,
+        bob_command=args.bob_command or None,
+    )
+    text_lines = [
+        f"--- Ripple-Agent Analysis: `{result['symbol_name']}` ({result['blast_radius_tier'].upper()}) ---",
+        f"Scenario: {result['scenario']}",
+        f"Sub-agent 1: {result['change_analysis']['description']}",
+        f"Sub-agent 2: Found {len(result['downstream_findings'])} downstream disturbed site(s).",
+        "",
+        result["semantic_warning"],
+        "",
+        f"Preventive Patches: {len(result['preventive_patches'])} file(s)",
+    ]
+    for p in result["preventive_patches"]:
+        text_lines.append(f"  * {p['file']}: {p['explanation']}")
+    _print(result, args.json, "\n".join(text_lines))
+    return 0
+
+
+def cmd_doc(args: argparse.Namespace) -> int:
+    engine = _engine(args)
+    result = engine.doc(
+        needle=args.symbol,
+        file=args.file,
+        code=args.code,
+        language=args.language,
+        bob_command=args.bob_command or None,
+    )
+    text_lines = [
+        f"--- Generated Documentation: `{result['symbol']}` ({result['language']}) ---",
+        f"Architecture Note: {result['architecture_note']}",
+        "",
+        result["docstring"],
+    ]
+    _print(result, args.json, "\n".join(text_lines))
+    return 0
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     engine = _engine(args)
     run_forever(engine, port=args.port, host=args.host, index_on_start=args.index,
@@ -248,6 +306,29 @@ def build_parser() -> argparse.ArgumentParser:
     p_delta = sub.add_parser("delta", help="cache delta since the last index")
     _common(p_delta)
     p_delta.set_defaults(func=cmd_delta)
+
+    p_deps = sub.add_parser("dependencies", help="workspace blast radius & dependent files for each file")
+    _common(p_deps)
+    p_deps.set_defaults(func=cmd_dependencies)
+
+    p_rip = sub.add_parser("ripple", help="Ripple-Agent impact analysis and preventive patch generation")
+    p_rip.add_argument("symbol", nargs="?", default="", help="symbol name or identifier")
+    _common(p_rip)
+    p_rip.add_argument("--file", default="", help="file containing the code")
+    p_rip.add_argument("--code", default="", help="code snippet")
+    p_rip.add_argument("--scenario", default="general", help="delete | signature | logic | custom")
+    p_rip.add_argument("--custom", default="", help="custom amendment description")
+    p_rip.add_argument("--bob-command", default="", help="Bob CLI or agent command")
+    p_rip.set_defaults(func=cmd_ripple)
+
+    p_doc = sub.add_parser("doc", help="generate language-tailored documentation and architecture note")
+    p_doc.add_argument("symbol", nargs="?", default="", help="symbol name or identifier")
+    _common(p_doc)
+    p_doc.add_argument("--file", default="", help="file containing the code")
+    p_doc.add_argument("--code", default="", help="code snippet")
+    p_doc.add_argument("--language", default="", help="python | typescript | javascript | go")
+    p_doc.add_argument("--bob-command", default="", help="Bob CLI or agent command")
+    p_doc.set_defaults(func=cmd_doc)
 
     p_model = sub.add_parser("model", help="print the model (compact by default)")
     _common(p_model)

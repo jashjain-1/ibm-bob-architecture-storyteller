@@ -246,3 +246,85 @@ export const LEVEL_HINTS: Record<DepthLevel, string> = {
     2: 'Architecture: flows, routes, models, module graph, ranked routines.',
     3: 'Evidence: per-symbol call sites, history, cycles, full appendix.',
 };
+
+// ---------------------------------------------------------------------------
+// Ripple Agent & Blast Radius Types
+// ---------------------------------------------------------------------------
+
+export type BlastRadiusTier = 'green' | 'yellow' | 'red';
+
+export interface FileCallerDetail {
+    caller_id: string;
+    caller_name: string;
+    caller_file: string;
+    caller_line: number;
+    target_symbol: string;
+    target_id: string;
+}
+
+export interface FileDependencyInfo {
+    path: string;
+    tier: BlastRadiusTier;
+    tier_label: string;
+    dependents_count: number;
+    dependent_files: string[];
+    total_inbound_calls: number;
+    callers: FileCallerDetail[];
+}
+
+export interface WorkspaceDependenciesPayload {
+    summary: {
+        total_files: number;
+        green_count: number;
+        yellow_count: number;
+        red_count: number;
+    };
+    files: Record<string, FileDependencyInfo>;
+}
+
+export interface PreventivePatch {
+    file: string;
+    explanation: string;
+    diff: string;
+    original_content: string;
+    patched_content: string;
+}
+
+export interface RippleAnalysisPayload {
+    symbol_name: string;
+    symbol_file: string;
+    scenario: string;
+    blast_radius_tier: BlastRadiusTier;
+    dependents_count: number;
+    change_analysis: {
+        sub_agent: string;
+        change_type: string;
+        symbol_name: string;
+        symbol_kind: string;
+        file: string;
+        line: number;
+        description: string;
+        contract_invariants: string[];
+        snippet_preview: string;
+    };
+    downstream_findings: {
+        file: string;
+        line: number;
+        symbol: string;
+        impact_type: string;
+        description: string;
+        is_test: boolean;
+    }[];
+    semantic_warning: string;
+    preventive_patches: PreventivePatch[];
+    orchestrator_summary: string;
+}
+
+export interface DocPayload {
+    symbol: string;
+    language: string;
+    format: string;
+    docstring: string;
+    architecture_note: string;
+}
+

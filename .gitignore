@@ -109,3 +109,6 @@ $RECYCLE.BIN/
 *.log
 *.tmp
 *.temp
+.agents/
+ORIGINAL_REQUEST.md
+

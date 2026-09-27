@@ -26,6 +26,10 @@
 		"onCommand:storyteller.pdf",
 		"onCommand:storyteller.previewDossier",
 		"onCommand:storyteller.exportDossier",
+		"onCommand:storyteller.createDocumentation",
+		"onCommand:storyteller.rippleDependency",
+		"onCommand:storyteller.whatIfAmended",
+		"onCommand:storyteller.applyPreventivePatch",
 		"onLanguage:python",
 		"onLanguage:typescript",
 		"onLanguage:javascript",
@@ -97,10 +101,49 @@
 				"title": "Preview or Export Dossier...",
 				"category": "Architecture Storyteller",
 				"icon": "$(book)"
+			},
+			{
+				"command": "storyteller.createDocumentation",
+				"title": "Create Documentation",
+				"category": "Ripple-Agent",
+				"icon": "$(book)"
+			},
+			{
+				"command": "storyteller.rippleDependency",
+				"title": "Dependency (Show Disturbed Files & Callers)",
+				"category": "Ripple-Agent",
+				"icon": "$(references)"
+			},
+			{
+				"command": "storyteller.whatIfAmended",
+				"title": "What If: Ripple Impact & Preventive Patches",
+				"category": "Ripple-Agent",
+				"icon": "$(git-compare)"
+			},
+			{
+				"command": "storyteller.applyPreventivePatch",
+				"title": "Apply Preventive Patch",
+				"category": "Ripple-Agent",
+				"icon": "$(check)"
 			}
 		],
 		"menus": {
 			"editor/context": [
+				{
+					"command": "storyteller.createDocumentation",
+					"group": "1_ripple@1",
+					"when": "editorHasSelection || editorTextFocus"
+				},
+				{
+					"command": "storyteller.rippleDependency",
+					"group": "1_ripple@2",
+					"when": "editorHasSelection || editorTextFocus"
+				},
+				{
+					"command": "storyteller.whatIfAmended",
+					"group": "1_ripple@3",
+					"when": "editorHasSelection || editorTextFocus"
+				},
 				{
 					"command": "storyteller.usages",
 					"group": "7_modification@1",
@@ -118,6 +161,18 @@
 				}
 			],
 			"commandPalette": [
+				{
+					"command": "storyteller.createDocumentation"
+				},
+				{
+					"command": "storyteller.rippleDependency"
+				},
+				{
+					"command": "storyteller.whatIfAmended"
+				},
+				{
+					"command": "storyteller.applyPreventivePatch"
+				},
 				{
 					"command": "storyteller.mindmap"
 				},

@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -57,9 +58,32 @@ from model_builder import (  # noqa: E402
     tree_payload,
 )
 from scan_filter import collect_files  # noqa: E402
+from ripple_agent import (  # noqa: E402
+    compute_workspace_dependencies,
+    synthesize_ripple_and_patches,
+    generate_documentation,
+)
 
 DEFAULT_LANGUAGES = ["python", "typescript", "javascript", "go"]
 RENDER_SCRIPT = _PROJECT_ROOT / "scripts" / "render_pdf.mjs"
+
+_ALLOWED_ORIGIN_REGEX = re.compile(r"^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$", re.IGNORECASE)
+
+
+def _is_allowed_origin(origin: str) -> bool:
+    if not origin:
+        return True
+    if origin.startswith(("vscode-webview://", "vscode-file://")):
+        return True
+    cleaned = origin.rstrip("/")
+    return bool(_ALLOWED_ORIGIN_REGEX.match(cleaned))
+
+
+def _is_valid_host(host_header: str) -> bool:
+    if not host_header:
+        return False
+    host_name = host_header.split(":")[0].strip().lower()
+    return host_name in ("localhost", "127.0.0.1")
 
 
 class SymbolLookupError(LookupError):
@@ -289,6 +313,48 @@ class StorytellerEngine:
             "callers": callers,
         }
 
+    # -- ripple & dependencies ---------------------------------------------
+
+    def dependencies(self) -> dict[str, Any]:
+        return compute_workspace_dependencies(self.ensure_model())
+
+    def ripple(self, needle: str = "", file: str = "", code: str = "",
+               scenario: str = "general", custom_amendment: str = "",
+               bob_command: Optional[str] = None) -> dict[str, Any]:
+        model = self.ensure_model()
+        sym = None
+        if needle:
+            try:
+                sym = self.find_symbol(needle)
+            except SymbolLookupError:
+                pass
+        return synthesize_ripple_and_patches(
+            repo_root=self.repo,
+            model=model,
+            symbol=sym,
+            code_snippet=code,
+            scenario=scenario,
+            custom_amendment=custom_amendment,
+            bob_command=bob_command,
+        )
+
+    def doc(self, needle: str = "", file: str = "", code: str = "",
+            language: str = "", bob_command: Optional[str] = None) -> dict[str, Any]:
+        sym = None
+        if needle:
+            try:
+                sym = self.find_symbol(needle)
+            except SymbolLookupError:
+                pass
+        return generate_documentation(
+            repo_root=self.repo,
+            symbol=sym,
+            code_snippet=code,
+            file_path=file,
+            language=language,
+            bob_command=bob_command,
+        )
+
     # -- dossier -----------------------------------------------------------
 
     def dossier_html(self, level: int = 2, bob_command: Optional[str] = None,
@@ -311,11 +377,19 @@ class StorytellerEngine:
                    llm_model: Optional[str] = None) -> dict[str, Any]:
         with self._dossier_lock:
             html = self.dossier_html(level, bob_command, llm_url, llm_model)
-            out_dir = Path(output).parent if output else self.repo / "output"
+            if output:
+                resolved_output = (self.repo / output).resolve()
+                if not resolved_output.is_relative_to(self.repo.resolve()):
+                    raise ValueError(f"Path traversal detected: {output!r} escapes repository root")
+                out_dir = resolved_output.parent
+                pdf_path = resolved_output
+            else:
+                out_dir = self.repo / "output"
+                pdf_path = out_dir / f"dossier-L{level}.pdf"
+
             out_dir.mkdir(parents=True, exist_ok=True)
             html_path = out_dir / f"dossier-L{level}.html"
             html_path.write_text(html, encoding="utf-8")
-            pdf_path = Path(output) if output else out_dir / f"dossier-L{level}.pdf"
             if not RENDER_SCRIPT.is_file():
                 raise FileNotFoundError(f"renderer not found: {RENDER_SCRIPT}")
             proc = subprocess.run(
@@ -368,6 +442,44 @@ class _Handler(BaseHTTPRequestHandler):
 
     # -- helpers -----------------------------------------------------------
 
+    def _send_error_raw(self, status: int, message: str) -> None:
+        body = json.dumps({"error": message}).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.close_connection = True
+        if self.command != "HEAD":
+            self.wfile.write(body)
+            self.wfile.flush()
+
+    def _validate_request(self) -> bool:
+        # 1. Host header validation: strictly localhost or 127.0.0.1 (with or without port)
+        host_hdr = self.headers.get("Host") or ""
+        if not _is_valid_host(host_hdr):
+            self._send_error_raw(400, "Invalid Host header")
+            return False
+
+        # 2. Origin validation: strictly localhost, 127.0.0.1, or vscode webview/file
+        origin = self.headers.get("Origin") or ""
+        if origin and not _is_allowed_origin(origin):
+            self._send_error_raw(403, "Forbidden origin")
+            return False
+
+        # 3. Content-Length check (> 50MB -> 413 Payload Too Large)
+        content_length_hdr = self.headers.get("Content-Length")
+        if content_length_hdr:
+            try:
+                length = int(content_length_hdr)
+                if length > 50 * 1024 * 1024:
+                    self._send_error_raw(413, "Payload Too Large: Content-Length exceeds 50MB limit")
+                    return False
+            except ValueError:
+                pass
+
+        return True
+
     def _send(self, payload: Any, status: int = 200, content_type: str = "application/json") -> None:
         if isinstance(payload, str):
             body = payload.encode("utf-8")
@@ -377,8 +489,13 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", f"{content_type}; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         origin = self.headers.get("Origin") or ""
-        if not origin or origin.startswith(("http://127.0.0.1", "http://localhost", "vscode-webview://", "vscode-file://")):
-            self.send_header("Access-Control-Allow-Origin", origin or "*")
+        if origin:
+            if _is_allowed_origin(origin):
+                self.send_header("Access-Control-Allow-Origin", origin)
+                self.send_header("Access-Control-Allow-Headers", "content-type")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        else:
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Headers", "content-type")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
@@ -402,12 +519,18 @@ class _Handler(BaseHTTPRequestHandler):
     # -- verbs -------------------------------------------------------------
 
     def do_OPTIONS(self) -> None:  # noqa: N802
+        if not self._validate_request():
+            return
         self._send("", 204, "text/plain")
 
     def do_GET(self) -> None:  # noqa: N802
+        if not self._validate_request():
+            return
         self._route("GET")
 
     def do_POST(self) -> None:  # noqa: N802
+        if not self._validate_request():
+            return
         self._route("POST")
 
     def _route(self, method: str) -> None:
@@ -437,6 +560,38 @@ class _Handler(BaseHTTPRequestHandler):
             if path == "/usages":
                 sym_needle = one("symbol")[:1000]
                 return self._send(self.engine.usages(sym_needle))
+            if path == "/dependencies":
+                return self._send(self.engine.dependencies())
+            if path == "/ripple":
+                body = self._body() if method == "POST" else {}
+                sym_needle = body.get("symbol") or one("symbol")
+                file_arg = body.get("file") or one("file")
+                code_arg = body.get("code") or ""
+                scenario = body.get("scenario") or one("scenario") or "general"
+                custom = body.get("custom_amendment") or one("custom_amendment") or ""
+                bob_cmd = body.get("bob_command") or None
+                return self._send(self.engine.ripple(
+                    needle=str(sym_needle)[:1000] if sym_needle else "",
+                    file=str(file_arg),
+                    code=str(code_arg),
+                    scenario=str(scenario),
+                    custom_amendment=str(custom),
+                    bob_command=bob_cmd,
+                ))
+            if path == "/doc":
+                body = self._body() if method == "POST" else {}
+                sym_needle = body.get("symbol") or one("symbol")
+                file_arg = body.get("file") or one("file")
+                code_arg = body.get("code") or ""
+                lang = body.get("language") or one("language") or ""
+                bob_cmd = body.get("bob_command") or None
+                return self._send(self.engine.doc(
+                    needle=str(sym_needle)[:1000] if sym_needle else "",
+                    file=str(file_arg),
+                    code=str(code_arg),
+                    language=str(lang),
+                    bob_command=bob_cmd,
+                ))
             if path == "/delta":
                 return self._send(self.engine.delta())
             if path == "/index":
@@ -457,6 +612,11 @@ class _Handler(BaseHTTPRequestHandler):
                 body = self._body() if method == "POST" else {}
                 level = int(body.get("level") or one("level", "2") or 2)
                 wants_pdf = bool(body.get("pdf")) or flag("pdf")
+                output_arg = body.get("output") or one("output") or None
+                if output_arg:
+                    resolved_output = (self.engine.repo / output_arg).resolve()
+                    if not resolved_output.is_relative_to(self.engine.repo.resolve()):
+                        raise ValueError(f"Path traversal detected: {output_arg!r} escapes repository root")
                 # Provider settings ride along so the exported dossier can be
                 # written by Bob / the local LLM, same as the index report.
                 bob_command = body.get("bob_command") or None
@@ -466,7 +626,7 @@ class _Handler(BaseHTTPRequestHandler):
                 llm_model = body.get("llm_model") or None
                 if wants_pdf:
                     return self._send(self.engine.render_pdf(
-                        level, body.get("output") or None,
+                        level, output_arg,
                         bob_command=bob_command, llm_url=llm_url, llm_model=llm_model))
                 if str(one("format", "html")).lower() == "json":
                     html = self.engine.dossier_html(level, bob_command, llm_url, llm_model)
@@ -500,7 +660,8 @@ def _emit(payload: dict[str, Any]) -> None:
     except Exception:
         pass
 
-def _watch_windows(watched_pid: int, on_exit: Callable[[], None]) -> bool:
+def _watch_windows(watched_pid: int, on_exit: Callable[[], None],
+                   resolve_trampoline: bool = False) -> bool:
     """Block on the parent's process handle and fire as soon as it is signalled."""
     import ctypes
     from ctypes import wintypes
@@ -508,6 +669,21 @@ def _watch_windows(watched_pid: int, on_exit: Callable[[], None]) -> bool:
     SYNCHRONIZE = 0x00100000
     INFINITE = 0xFFFFFFFF
     ERROR_INVALID_PARAMETER = 87
+    TH32CS_SNAPPROCESS = 0x00000002
+
+    class PROCESSENTRY32W(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.c_size_t),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", ctypes.c_long),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.WCHAR * 260),
+        ]
 
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     # Declare the prototypes: without argtypes ctypes passes INFINITE as a signed
@@ -517,6 +693,18 @@ def _watch_windows(watched_pid: int, on_exit: Callable[[], None]) -> bool:
     kernel32.OpenProcess.restype = wintypes.HANDLE
     kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
     kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.WaitForMultipleObjects.argtypes = [
+        wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE), wintypes.BOOL, wintypes.DWORD
+    ]
+    kernel32.WaitForMultipleObjects.restype = wintypes.DWORD
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel32.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)]
+    kernel32.Process32FirstW.restype = wintypes.BOOL
+    kernel32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)]
+    kernel32.Process32NextW.restype = wintypes.BOOL
 
     handle = kernel32.OpenProcess(SYNCHRONIZE, False, watched_pid)
     if not handle:
@@ -526,13 +714,59 @@ def _watch_windows(watched_pid: int, on_exit: Callable[[], None]) -> bool:
             return True
         return False
 
-    def _wait() -> None:
-        # Returns when the parent process becomes signalled, i.e. when it exits.
+    handles: list[Any] = [handle]
+
+    if resolve_trampoline:
         try:
-            kernel32.WaitForSingleObject(handle, INFINITE)
+            snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+            if snap and snap != wintypes.HANDLE(-1).value and snap != -1:
+                entry = PROCESSENTRY32W()
+                entry.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+                parent_info: Optional[tuple[int, str]] = None
+                if kernel32.Process32FirstW(snap, ctypes.byref(entry)):
+                    while True:
+                        if entry.th32ProcessID == watched_pid:
+                            parent_info = (entry.th32ParentProcessID, entry.szExeFile)
+                            break
+                        if not kernel32.Process32NextW(snap, ctypes.byref(entry)):
+                            break
+                kernel32.CloseHandle(snap)
+
+                if parent_info:
+                    gparent_pid, parent_exe = parent_info
+                    trampolines = ("python.exe", "pythonw.exe", "venvlauncher.exe", "venvwlauncher.exe")
+                    if (parent_exe.lower() in trampolines and
+                            gparent_pid > 0 and
+                            gparent_pid != watched_pid and
+                            gparent_pid != os.getpid()):
+                        g_handle = kernel32.OpenProcess(SYNCHRONIZE, False, gparent_pid)
+                        if g_handle:
+                            handles.append(g_handle)
+                        elif ctypes.get_last_error() == ERROR_INVALID_PARAMETER:
+                            # Grandparent already terminated: host is gone.
+                            kernel32.CloseHandle(handle)
+                            on_exit()
+                            return True
+        except Exception:
+            pass
+
+    def _wait() -> None:
+        # Returns when any watched process exits.
+        try:
+            if len(handles) == 1:
+                kernel32.WaitForSingleObject(handles[0], INFINITE)
+            else:
+                h_array = (wintypes.HANDLE * len(handles))(*handles)
+                kernel32.WaitForMultipleObjects(len(handles), h_array, False, INFINITE)
             on_exit()
         except Exception as exc:  # a dead watchdog must be visible, not silent
             _emit({"event": "parent-watch-error", "error": repr(exc)})
+        finally:
+            for h in handles:
+                try:
+                    kernel32.CloseHandle(h)
+                except Exception:
+                    pass
 
     threading.Thread(target=_wait, name="parent-watchdog", daemon=True).start()
     return True
@@ -573,6 +807,7 @@ def start_parent_watchdog(on_exit: Callable[[], None],
     honoured as-is; the default watches this process's own parent.
     """
     try:
+        is_inferred = parent_pid is None
         watched = parent_pid if parent_pid else os.getppid()
     except Exception:
         return False
@@ -580,7 +815,7 @@ def start_parent_watchdog(on_exit: Callable[[], None],
         return False
     try:
         if sys.platform == "win32":
-            return _watch_windows(watched, on_exit)
+            return _watch_windows(watched, on_exit, resolve_trampoline=is_inferred)
         return _watch_posix(watched, on_exit, interval)
     except Exception:
         return False

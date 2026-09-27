@@ -15,12 +15,15 @@ import * as vscode from 'vscode';
 
 import {
     DepthLevel,
+    DocPayload,
     DossierResult,
     HealthPayload,
     IndexReport,
+    RippleAnalysisPayload,
     SymbolContext,
     TreePayload,
     UsagesPayload,
+    WorkspaceDependenciesPayload,
 } from './types';
 
 export interface EngineLaunchOptions {
@@ -315,6 +318,52 @@ export class EngineClient implements vscode.Disposable {
     public async dossierPdf(level: DepthLevel, output?: string): Promise<DossierResult> {
         return this.request<DossierResult>('POST', '/dossier',
             { level, pdf: true, output, ...this.providerSettings() }, 900_000);
+    }
+
+    public async dependencies(): Promise<WorkspaceDependenciesPayload> {
+        return this.request<WorkspaceDependenciesPayload>('GET', '/dependencies');
+    }
+
+    public async ripple(params: {
+        symbol?: string;
+        file?: string;
+        code?: string;
+        scenario?: string;
+        customAmendment?: string;
+    }): Promise<RippleAnalysisPayload> {
+        return this.request<RippleAnalysisPayload>(
+            'POST',
+            '/ripple',
+            {
+                symbol: params.symbol ?? '',
+                file: params.file ?? '',
+                code: params.code ?? '',
+                scenario: params.scenario ?? 'general',
+                custom_amendment: params.customAmendment ?? '',
+                bob_command: this.options.bobCommand,
+            },
+            120_000
+        );
+    }
+
+    public async doc(params: {
+        symbol?: string;
+        file?: string;
+        code?: string;
+        language?: string;
+    }): Promise<DocPayload> {
+        return this.request<DocPayload>(
+            'POST',
+            '/doc',
+            {
+                symbol: params.symbol ?? '',
+                file: params.file ?? '',
+                code: params.code ?? '',
+                language: params.language ?? '',
+                bob_command: this.options.bobCommand,
+            },
+            60_000
+        );
     }
 
     public invalidate(): void {

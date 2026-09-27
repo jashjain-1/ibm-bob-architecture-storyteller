@@ -87,7 +87,9 @@ check("missing engine in a foreign workspace returns undefined",
 // --- python resolution ------------------------------------------------------
 const python = locate.findPython([REPO], "");
 check("finds a python interpreter", typeof python === "string" && python.length > 0, python);
-check("honours a configured interpreter", locate.findPython([REPO], "C:\\custom\\python.exe") === "C:\\custom\\python.exe");
+check("honours a configured interpreter",
+    locate.findPython([REPO], "C:\\custom\\python.exe") === "C:\\custom\\python.exe" &&
+    locate.findPython([REPO], '"C:\\custom\\python.exe"') === "C:\\custom\\python.exe");
 
 check("the engine directory actually exists on this machine", existsSync(path.join(ENGINE_DIR, "cli.py")));
 
