@@ -1,0 +1,5 @@
+We built a VS Code + IBM Bob extension that thinks like a senior architect.
+
+Touch any function — Ripple-Agent maps blast radius across Python, TypeScript, Go, and JavaScript, writes preventive patches before you break anything, and exports a publication-grade dossier in one command.
+
+Architecture Storyteller 2.0 + Ripple-Agent. 🟢🟡🔴

@@ -1,0 +1,21 @@
+Every change you make ripples. Most developers find out too late.
+
+Architecture Storyteller maps your entire codebase — every symbol, every call, every dependency — across Python, TypeScript, Go, and JavaScript.
+
+Every file in your repo is automatically ranked — green for safe, yellow for moderate, red for high blast radius. You always know where the danger is.
+
+Hit Control Alt M and your entire repository becomes a living map. Call graphs, dependency chains, complexity scores — all driven by the same real-time AST engine.
+
+Hover over any function and Architecture Storyteller tells you who calls it, what it calls, and exactly how complex it is — with an AI-generated architectural insight ready to read.
+
+Right-click any function and ask What If. Ripple-Agent fires two parallel AST crawlers — one maps the change, one traces every downstream caller. The result: a full impact report with preventive patches already written.
+
+The blast radius is calculated automatically. Green, yellow, red — by inbound call count. And the patch? Already in your diff view, one click away.
+
+Need a report? Hit Control Alt D. Architecture Storyteller generates a publication-grade dossier — executive summary, engineering deep-dive, or full forensic audit — and exports a PDF via headless Chromium. All in one command.
+
+And it's hardened. CORS, DNS rebinding, denial-of-service, path traversal, remote code execution — all audited, all closed. Eighty tests. A hundred percent passing.
+
+Zero TypeScript errors. A forty-coin budget cap. And zero drift — because every hover, every map, every dossier reads from the same live AST model.
+
+Architecture Storyteller 2.0 and Ripple-Agent. For VS Code and IBM Bob IDE. Your codebase has never been this understood.

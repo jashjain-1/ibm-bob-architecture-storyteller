@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>Architecture Storyteller 2.0 — Brag Video</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0d1117; }
+
+  :root {
+    --bg:      #0d1117;
+    --surface: #161b22;
+    --border:  #30363d;
+    --text:    #e6edf3;
+    --muted:   #8b949e;
+    --accent:  #58a6ff;
+    --blue-dk: #12467b;
+    --green:   #3fb950;
+    --amber:   #d29922;
+    --red:     #f85149;
+    --mono:    "Cascadia Mono", Consolas, monospace;
+    --sans:    "Segoe UI", system-ui, sans-serif;
+  }
+
+  /* All scenes: absolute, full-canvas, hidden by default — GSAP controls visibility */
+  .scene {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    visibility: hidden;
+  }
+
+  /* Typography */
+  .headline    { font: 600 64px/1.2 var(--sans); color: var(--text); text-align: center; letter-spacing: -0.5px; }
+  .sub         { font: 400 22px/1.5 var(--sans); color: var(--muted); text-align: center; }
+  .label       { font: 600 26px/1.4 var(--sans); color: var(--text); text-align: center; }
+  .kicker      { font: 600 13px/1 var(--sans); letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .accent      { color: var(--accent); }
+  .green-text  { color: var(--green); }
+  .amber-text  { color: var(--amber); }
+  .red-text    { color: var(--red); }
+  .mono-text   { font-family: var(--mono); }
+
+  /* Status bar */
+  .status-bar {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(210,153,34,0.15); border: 1px solid var(--amber);
+    border-radius: 6px; padding: 10px 22px;
+    font: 600 22px/1 var(--mono); color: var(--amber);
+    margin-bottom: 40px;
+  }
+  .status-error { background: rgba(241,81,73,0.15); border-color: var(--red); color: var(--red); }
+  .status-ok    { background: rgba(63,185,80,0.12); border-color: var(--green); color: var(--green); }
+
+  /* Explorer panel */
+  .explorer { width: 520px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .explorer-header { padding: 12px 18px; font: 600 11px/1 var(--sans); letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .explorer-file { display: flex; align-items: center; gap: 10px; padding: 11px 18px; font: 400 17px/1 var(--mono); color: var(--text); border-bottom: 1px solid rgba(48,54,61,0.5); }
+  .badge { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+  .badge-red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+  .badge-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .badge-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* Graph */
+  .graph-canvas { position: relative; width: 860px; height: 460px; }
+  .graph-node { position: absolute; background: var(--surface); border: 2px solid var(--accent); border-radius: 8px; padding: 12px 22px; font: 600 16px/1 var(--mono); color: var(--accent); }
+  .graph-edge { position: absolute; height: 2px; background: var(--accent); opacity: 0.45; transform-origin: left center; }
+
+  /* Hover card */
+  .hover-card { width: 580px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 22px 28px; }
+  .hover-card-title { font: 700 20px/1 var(--mono); color: var(--accent); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .hover-row { display: flex; gap: 10px; margin-bottom: 8px; font: 400 15px/1.5 var(--mono); color: var(--text); }
+  .hover-key { color: var(--muted); width: 210px; flex-shrink: 0; }
+
+  /* Diff */
+  .diff-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 1380px; }
+  .diff-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .diff-header { padding: 10px 16px; background: rgba(48,54,61,0.5); font: 600 13px/1 var(--mono); color: var(--muted); border-bottom: 1px solid var(--border); }
+  .diff-body { padding: 16px; font: 400 14px/1.8 var(--mono); color: var(--text); }
+  .diff-add { color: var(--green); }
+  .diff-comment { color: var(--amber); display: block; padding: 2px 4px; background: rgba(63,185,80,0.07); border-radius: 3px; }
+
+  /* Affected files */
+  .affected-list { width: 680px; margin-top: 20px; }
+  .affected-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; font: 400 16px/1 var(--mono); color: var(--text); }
+  .affected-count { color: var(--muted); font-size: 13px; }
+
+  /* Blast card */
+  .blast-card { width: 740px; background: var(--surface); border: 2px solid var(--red); border-radius: 12px; padding: 32px 40px; box-shadow: 0 0 40px rgba(241,81,73,0.18); }
+  .blast-card-green { border-color: var(--green); box-shadow: 0 0 40px rgba(63,185,80,0.18); }
+  .blast-title { font: 700 38px/1 var(--sans); color: var(--red); margin-bottom: 14px; }
+  .blast-title-green { color: var(--green); }
+  .blast-hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  .blast-stat { font: 600 18px/1.6 var(--mono); color: var(--text); }
+
+  /* Dossier */
+  .dossier-panel { width: 1180px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .dossier-cover { background: var(--blue-dk); padding: 28px 36px; }
+  .dossier-cover-kicker { font: 600 11px/1 var(--sans); letter-spacing: 3px; text-transform: uppercase; color: rgba(230,237,243,0.6); }
+  .dossier-cover-title { font: 700 34px/1.2 var(--sans); color: var(--text); margin-top: 8px; }
+  .dossier-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .dossier-tab { padding: 12px 24px; font: 600 14px/1 var(--sans); color: var(--muted); border-bottom: 2px solid transparent; }
+  .dossier-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .dossier-body { padding: 22px 30px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+  .kpi-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+  .kpi-num { font: 700 32px/1 var(--sans); color: var(--accent); }
+  .kpi-label { font: 400 13px/1.4 var(--sans); color: var(--muted); margin-top: 4px; }
+  .terminal-line { font: 400 15px/1.6 var(--mono); color: var(--green); background: rgba(0,0,0,0.4); padding: 12px 16px; border-radius: 6px; margin-top: 10px; }
+
+  /* Security table */
+  .sec-table { width: 1080px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .sec-row { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 16px 28px; border-bottom: 1px solid var(--border); font: 400 18px/1 var(--sans); color: var(--text); background: var(--surface); }
+  .sec-row:nth-child(odd) { background: rgba(22,27,34,0.7); }
+  .sec-status { font: 600 14px/1 var(--sans); color: var(--green); }
+
+  /* Stat cards */
+  .stat-grid { display: flex; gap: 24px; }
+  .stat-card { width: 260px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; text-align: center; }
+  .stat-num { font: 700 56px/1 var(--sans); color: var(--accent); }
+  .stat-label { font: 400 15px/1.4 var(--sans); color: var(--muted); margin-top: 8px; }
+
+  /* Logo */
+  .logo-rule { width: 56px; height: 3px; background: var(--blue-dk); border-radius: 2px; margin: 16px auto; }
+  .logo-title { font: 650 50px/1.1 var(--sans); color: var(--text); text-align: center; letter-spacing: -0.5px; }
+  .logo-sub   { font: 400 28px/1 var(--sans); color: var(--accent); text-align: center; margin-top: 10px; }
+  .logo-tag   { font: 400 16px/1 var(--sans); color: var(--muted); text-align: center; font-style: italic; margin-top: 20px; }
+
+  /* Editor */
+  .editor-pane { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .editor-tabs { display: flex; background: rgba(13,17,23,0.8); border-bottom: 1px solid var(--border); }
+  .editor-tab { padding: 10px 20px; font: 400 13px/1 var(--mono); color: var(--muted); border-right: 1px solid var(--border); }
+  .editor-tab.active { color: var(--text); background: var(--surface); }
+  .editor-body { padding: 20px 24px; }
+  .code-line { font: 400 15px/1.9 var(--mono); color: var(--text); }
+  .code-kw { color: #ff7b72; }
+  .code-fn { color: #d2a8ff; }
+  .code-param { color: #ffa657; }
+  .code-str { color: #a5d6ff; }
+
+  /* Context menu */
+  .ctx-menu { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; width: 340px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+  .ctx-item { padding: 9px 16px; font: 400 14px/1 var(--sans); color: var(--text); }
+  .ctx-item.active { background: var(--accent); color: #fff; }
+  .ctx-sep { border: none; border-top: 1px solid var(--border); margin: 3px 0; }
+
+  /* Legend */
+  .legend { display: flex; gap: 20px; margin-top: 20px; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font: 400 14px/1 var(--sans); color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="root"
+  data-composition-id="arch-storyteller-brag"
+  data-start="0" data-duration="110"
+  data-width="1920" data-height="1080">
+
+<!-- ── AUDIO ── -->
+<audio id="music"        data-start="0"     data-duration="110"  data-track-index="10" data-volume="0.28" src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3" class="clip"></audio>
+<audio id="vo"           data-start="0"     data-duration="107.8" data-track-index="3"  data-volume="1.0"  src="assets/voiceover.wav" class="clip"></audio>
+<audio id="sfx-s1-bong"  data-start="1.4"   data-duration="0.5"  data-track-index="11" data-volume="0.55" src="assets/sfx/interface/bong_001.ogg" class="clip"></audio>
+<audio id="sfx-s2-glitch" data-start="14.2" data-duration="0.5"  data-track-index="12" data-volume="0.55" src="assets/sfx/interface/glitch_002.ogg" class="clip"></audio>
+<audio id="sfx-s3-b1"   data-start="20.0"   data-duration="0.3"  data-track-index="13" data-volume="0.70" src="assets/sfx/interface/drop_002.ogg" class="clip"></audio>
+<audio id="sfx-s3-b2"   data-start="20.6"   data-duration="0.3"  data-track-index="14" data-volume="0.65" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s3-b3"   data-start="21.2"   data-duration="0.3"  data-track-index="15" data-volume="0.65" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s3-b4"   data-start="21.8"   data-duration="0.3"  data-track-index="16" data-volume="0.65" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s3-b5"   data-start="22.4"   data-duration="0.3"  data-track-index="17" data-volume="0.65" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s3-b6"   data-start="23.0"   data-duration="0.3"  data-track-index="18" data-volume="0.70" src="assets/sfx/interface/drop_002.ogg" class="clip"></audio>
+<audio id="sfx-s5-click" data-start="46.2"  data-duration="0.1"  data-track-index="19" data-volume="0.55" src="assets/sfx/interface/click_003.ogg" class="clip"></audio>
+<audio id="sfx-s6-click" data-start="56.0"  data-duration="0.1"  data-track-index="20" data-volume="0.70" src="assets/sfx/interface/click_003.ogg" class="clip"></audio>
+<audio id="sfx-s6-imp"  data-start="58.3"   data-duration="0.3"  data-track-index="21" data-volume="0.70" src="assets/sfx/impact/impactSoft_medium_001.ogg" class="clip"></audio>
+<audio id="sfx-s6-f1"   data-start="60.0"   data-duration="0.3"  data-track-index="22" data-volume="0.55" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s6-f2"   data-start="60.5"   data-duration="0.3"  data-track-index="23" data-volume="0.55" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s6-f3"   data-start="61.0"   data-duration="0.3"  data-track-index="24" data-volume="0.55" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s7-bell" data-start="70.2"   data-duration="0.5"  data-track-index="25" data-volume="0.65" src="assets/sfx/impact/impactBell_heavy_000.ogg" class="clip"></audio>
+<audio id="sfx-s7-swap" data-start="73.5"   data-duration="0.3"  data-track-index="26" data-volume="0.55" src="assets/sfx/impact/impactSoft_medium_001.ogg" class="clip"></audio>
+<audio id="sfx-s9-r1"  data-start="93.0"    data-duration="0.3"  data-track-index="27" data-volume="0.60" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s9-r2"  data-start="93.6"    data-duration="0.3"  data-track-index="28" data-volume="0.60" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s9-r3"  data-start="94.2"    data-duration="0.3"  data-track-index="29" data-volume="0.60" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s9-r4"  data-start="94.8"    data-duration="0.3"  data-track-index="30" data-volume="0.60" src="assets/sfx/interface/drop_001.ogg" class="clip"></audio>
+<audio id="sfx-s9-r5"  data-start="95.4"    data-duration="0.3"  data-track-index="31" data-volume="0.60" src="assets/sfx/interface/drop_002.ogg" class="clip"></audio>
+<audio id="sfx-logo-bell" data-start="107.2" data-duration="1.0" data-track-index="32" data-volume="0.60" src="assets/sfx/impact/impactBell_heavy_000.ogg" class="clip"></audio>
+
+<!-- ════════════════════════════════════════
+     SCENE 1 — Hook — 0–8s
+     ════════════════════════════════════════ -->
+<div id="s1" class="scene clip" data-start="0" data-duration="8" data-track-index="0">
+  <div id="s1-status" class="status-bar">🔥&nbsp;Ripple: High Blast Radius (8 deps)</div>
+  <div id="s1-h1" class="headline" style="max-width:1100px;">
+    What if your IDE knew<br>what you were about to break?
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 2 — Problem — 8–18s
+     ════════════════════════════════════════ -->
+<div id="s2" class="scene clip" data-start="8" data-duration="10" data-track-index="0">
+  <div id="s2-editor" class="editor-pane" style="width:1000px;">
+    <div class="editor-tabs">
+      <div class="editor-tab active">routes.py</div>
+      <div class="editor-tab">ripple_agent.py</div>
+    </div>
+    <div class="editor-body">
+      <div class="code-line"><span class="code-kw">def</span> <span class="code-fn">verify_token</span>(<span class="code-param">token</span>):</div>
+      <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">if not</span> token: <span class="code-kw">raise</span> ValueError(<span class="code-str">"Invalid token"</span>)</div>
+      <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">return</span> decode(token)</div>
+      <div class="code-line">&nbsp;</div>
+      <div class="code-line"><span class="code-kw">def</span> <span class="code-fn">handle_request</span>(<span class="code-param">req</span>):</div>
+      <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;user = verify_token(req.headers[<span class="code-str">"Authorization"</span>])</div>
+    </div>
+  </div>
+  <div id="s2-fail" class="status-bar status-error" style="margin-top:28px; font-size:18px;">✗&nbsp;CI Failed — 4 tests broken</div>
+  <div id="s2-sub" class="sub" style="margin-top:14px; max-width:900px; font-size:18px;">You changed one function. Four tests broke. You found out 20 minutes later.</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 3 — Explorer Badges — 18–29s
+     ════════════════════════════════════════ -->
+<div id="s3" class="scene clip" data-start="18" data-duration="11" data-track-index="0">
+  <div style="display:flex; align-items:flex-start; gap:80px;">
+    <div id="s3-explorer" class="explorer">
+      <div class="explorer-header">Explorer</div>
+      <div id="s3-f1" class="explorer-file"><div class="badge badge-red"></div>engine_server.py</div>
+      <div id="s3-f2" class="explorer-file"><div class="badge badge-red"></div>ripple_agent.py</div>
+      <div id="s3-f3" class="explorer-file"><div class="badge badge-amber"></div>model_builder.py</div>
+      <div id="s3-f4" class="explorer-file"><div class="badge badge-amber"></div>cache_store.py</div>
+      <div id="s3-f5" class="explorer-file"><div class="badge badge-green"></div>extension.ts</div>
+      <div id="s3-f6" class="explorer-file"><div class="badge badge-green"></div>coin_ledger.py</div>
+    </div>
+    <div style="display:flex;flex-direction:column;justify-content:center;padding-top:50px;">
+      <div id="s3-label" class="label" style="text-align:left; font-size:30px; max-width:460px;">Every file.<br>Ranked by blast radius.</div>
+      <div id="s3-legend" class="legend">
+        <div class="legend-item"><span class="badge badge-red" style="display:inline-block"></span>High</div>
+        <div class="legend-item"><span class="badge badge-amber" style="display:inline-block"></span>Moderate</div>
+        <div class="legend-item"><span class="badge badge-green" style="display:inline-block"></span>Safe</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 4 — Architecture Map — 29–42s
+     ════════════════════════════════════════ -->
+<div id="s4" class="scene clip" data-start="29" data-duration="13" data-track-index="0">
+  <div id="s4-kicker" class="kicker" style="font-size:15px; margin-bottom:10px;">Ctrl+Alt+M — Open Architecture Map</div>
+  <div id="s4-graph" class="graph-canvas">
+    <div id="s4-n1" class="graph-node" style="left:340px;top:30px;">engine_server</div>
+    <div id="s4-n2" class="graph-node" style="left:70px;top:200px;">ripple_agent</div>
+    <div id="s4-n3" class="graph-node" style="left:590px;top:200px;">model_builder</div>
+    <div id="s4-n4" class="graph-node" style="left:340px;top:360px;">cache_store</div>
+    <div id="s4-e1" class="graph-edge" style="left:400px;top:80px;width:130px;transform:rotate(38deg);"></div>
+    <div id="s4-e2" class="graph-edge" style="left:400px;top:80px;width:210px;transform:rotate(-18deg);"></div>
+    <div id="s4-e3" class="graph-edge" style="left:200px;top:240px;width:400px;"></div>
+  </div>
+  <div id="s4-label" class="label" style="font-size:26px; max-width:860px; margin-top:20px;">Interactive architecture map.<br>Every symbol. Every call. Zero lag.</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 5 — Hover Intelligence — 42–52s
+     ════════════════════════════════════════ -->
+<div id="s5" class="scene clip" data-start="42" data-duration="10" data-track-index="0">
+  <div style="display:flex;gap:60px;align-items:flex-start;">
+    <div id="s5-editor" class="editor-pane" style="width:580px;">
+      <div class="editor-tabs"><div class="editor-tab active">ripple_agent.py</div></div>
+      <div class="editor-body">
+        <div class="code-line"><span class="code-kw">def</span> <span class="code-fn" style="background:rgba(88,166,255,0.12);padding:1px 4px;border-radius:3px;">analyze_change</span>(</div>
+        <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-param">symbol</span>, <span class="code-param">file</span>, <span class="code-param">code</span></div>
+        <div class="code-line">):</div>
+        <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;shape = detect_shape(symbol)</div>
+        <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;downstream = scan_downstream(file)</div>
+        <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-kw">return</span> invoke_bob(shape, downstream)</div>
+      </div>
+    </div>
+    <div id="s5-hover" class="hover-card">
+      <div class="hover-card-title">analyze_change</div>
+      <div class="hover-row"><span class="hover-key">Callers</span><span>3 (engine_server · cli · test_ripple_agent)</span></div>
+      <div class="hover-row"><span class="hover-key">Callees</span><span class="accent">scan_downstream, invoke_bob</span></div>
+      <div class="hover-row"><span class="hover-key">Cyclomatic complexity</span><span>7</span></div>
+      <div class="hover-row" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <span class="hover-key" style="color:var(--amber);">AI insight</span>
+        <span style="color:var(--amber);font-style:italic;">"Core orchestration entry-point. High ripple risk."</span>
+      </div>
+    </div>
+  </div>
+  <div id="s5-label" class="sub" style="margin-top:24px; font-size:19px;">Hover any symbol. Get callers, callees, complexity, and AI insight — instantly.</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 6 — Ripple What-If — 52–68s
+     ════════════════════════════════════════ -->
+<div id="s6" class="scene clip" data-start="52" data-duration="16" data-track-index="0">
+  <div id="s6-ctx" class="ctx-menu" style="margin-bottom:20px;">
+    <div class="ctx-item">Create Documentation</div>
+    <div class="ctx-item">Dependency (Show Disturbed Files)</div>
+    <hr class="ctx-sep">
+    <div class="ctx-item active">What If: Ripple Impact &amp; Preventive Patches</div>
+    <div class="ctx-item">Show Call Sites</div>
+  </div>
+  <div id="s6-diff" class="diff-container">
+    <div class="diff-panel">
+      <div class="diff-header">ripple_agent.py · before</div>
+      <div class="diff-body">
+        <div class="code-line"><span class="code-kw">def</span> <span class="code-fn">verify_token</span>(<span class="code-param">token</span>):</div>
+        <div class="code-line">&nbsp;&nbsp;<span class="code-kw">if not</span> token: <span class="code-kw">raise</span> ValueError(<span class="code-str">"Invalid"</span>)</div>
+        <div class="code-line">&nbsp;&nbsp;<span class="code-kw">return</span> decode(token)</div>
+      </div>
+    </div>
+    <div class="diff-panel">
+      <div class="diff-header">routes.py · preventive patch</div>
+      <div class="diff-body">
+        <div class="code-line"><span class="code-kw">def</span> <span class="code-fn">handle_request</span>(<span class="code-param">req</span>):</div>
+        <div class="code-line">&nbsp;&nbsp;user = verify_token(req.headers[<span class="code-str">"Auth"</span>])</div>
+        <span class="diff-comment">&nbsp;&nbsp;# TODO(ripple-agent): update auth call —<br>&nbsp;&nbsp;# verify_token signature changed (line 42)</span>
+      </div>
+    </div>
+  </div>
+  <div id="s6-affected" class="affected-list">
+    <div id="s6-af1" class="affected-row">routes.py <span class="affected-count">1 call site</span></div>
+    <div id="s6-af2" class="affected-row">test_ripple_agent.py <span class="affected-count">3 assertions</span></div>
+    <div id="s6-af3" class="affected-row">engine_server.py <span class="affected-count">2 imports</span></div>
+  </div>
+  <div id="s6-label" class="label" style="font-size:22px; max-width:1200px; margin-top:16px;">Every downstream file. Every call site. Patches written before you ask.</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 7 — Blast Radius Card — 68–78s
+     ════════════════════════════════════════ -->
+<div id="s7" class="scene clip" data-start="68" data-duration="10" data-track-index="0">
+  <div id="s7-red" class="blast-card">
+    <div class="blast-title">🔴&nbsp; HIGH BLAST RADIUS</div>
+    <hr class="blast-hr">
+    <div class="blast-stat">8 dependents &nbsp;·&nbsp; 3 modules &nbsp;·&nbsp; 4 test assertions</div>
+    <div class="blast-stat" style="margin-top:10px;"><span class="amber-text">🟡 MODERATE</span> &nbsp;model_builder.py · cache_store.py</div>
+    <div class="blast-stat" style="margin-top:6px;"><span class="green-text">🟢 SAFE</span> &nbsp;coin_ledger.py · types.ts</div>
+    <div class="sub" style="margin-top:16px;text-align:left;font-size:16px;">Blast radius assigned. Tier by tier.</div>
+  </div>
+  <div id="s7-green" class="blast-card blast-card-green" style="position:absolute;">
+    <div class="blast-title blast-title-green">🟢&nbsp; PATCH APPLIED</div>
+    <hr class="blast-hr">
+    <div class="blast-stat green-text">8 files updated · 0 errors · 1-click apply</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 8 — Dossier — 78–92s
+     ════════════════════════════════════════ -->
+<div id="s8" class="scene clip" data-start="78" data-duration="14" data-track-index="0">
+  <div id="s8-kicker" class="kicker" style="font-size:14px; margin-bottom:10px;">Ctrl+Alt+D — Publication Dossier</div>
+  <div id="s8-panel" class="dossier-panel">
+    <div class="dossier-cover">
+      <div class="dossier-cover-kicker">Architecture Storyteller 2.0</div>
+      <div class="dossier-cover-title">Engineering Dossier</div>
+    </div>
+    <div class="dossier-tabs">
+      <div id="s8-t1" class="dossier-tab">L1 Executive</div>
+      <div id="s8-t2" class="dossier-tab active">L2 Engineering</div>
+      <div id="s8-t3" class="dossier-tab">L3 Forensic</div>
+    </div>
+    <div class="dossier-body">
+      <div class="kpi-grid">
+        <div id="s8-k1" class="kpi-card"><div class="kpi-num">80</div><div class="kpi-label">Tests passing</div></div>
+        <div id="s8-k2" class="kpi-card"><div class="kpi-num">4.2</div><div class="kpi-label">Cyclomatic avg</div></div>
+        <div id="s8-k3" class="kpi-card"><div class="kpi-num accent">0</div><div class="kpi-label">TypeScript errors</div></div>
+      </div>
+      <div id="s8-term" class="terminal-line">$ python cli.py dossier --level 2 --pdf<br><span style="color:var(--muted);"># → architecture-storyteller-2.1.1-dossier.pdf</span></div>
+    </div>
+  </div>
+  <div id="s8-label" class="label" style="font-size:22px; margin-top:20px;">Three dossier depths. Print-grade PDF. One command.</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 9 — Security Hardening — 92–100s
+     ════════════════════════════════════════ -->
+<div id="s9" class="scene clip" data-start="92" data-duration="8" data-track-index="0">
+  <div id="s9-table" class="sec-table">
+    <div id="s9-r1" class="sec-row">CORS Origin Bypass<div class="sec-status">🟢 Defended</div></div>
+    <div id="s9-r2" class="sec-row">DNS Rebinding<div class="sec-status">🟢 Defended</div></div>
+    <div id="s9-r3" class="sec-row">Denial of Service<div class="sec-status">🟢 Defended</div></div>
+    <div id="s9-r4" class="sec-row">Path Traversal<div class="sec-status">🟢 Defended</div></div>
+    <div id="s9-r5" class="sec-row">Remote Code Execution<div class="sec-status">🟢 Defended</div></div>
+  </div>
+  <div id="s9-label" class="label" style="font-size:24px; margin-top:22px;">5 attack vectors. All closed. Penetration-audited.</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 10 — Stats — 100–107s
+     ════════════════════════════════════════ -->
+<div id="s10" class="scene clip" data-start="100" data-duration="7" data-track-index="0">
+  <div id="s10-grid" class="stat-grid">
+    <div id="s10-c1" class="stat-card"><div class="stat-num">80</div><div class="stat-label">tests passing</div></div>
+    <div id="s10-c2" class="stat-card"><div class="stat-num">0</div><div class="stat-label">TypeScript errors</div></div>
+    <div id="s10-c3" class="stat-card"><div class="stat-num" style="font-size:40px;">40-coin</div><div class="stat-label">budget cap</div></div>
+    <div id="s10-c4" class="stat-card"><div class="stat-num" style="font-size:40px;color:var(--green);">zero</div><div class="stat-label">drift</div></div>
+  </div>
+  <div id="s10-label" class="sub" style="font-style:italic; margin-top:24px; max-width:900px;">Guaranteed zero drift. Every consumer shares the same AST model.</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCENE 11 — Logo — 107–110s
+     ════════════════════════════════════════ -->
+<div id="s11" class="scene clip" data-start="107" data-duration="3" data-track-index="0">
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <div id="s11-kicker" class="kicker">IBM Bob · VS Code Extension</div>
+    <div id="s11-rule" class="logo-rule"></div>
+    <div id="s11-title" class="logo-title">Architecture Storyteller 2.0</div>
+    <div id="s11-sub" class="logo-sub">+ Ripple-Agent</div>
+    <div id="s11-tag" class="logo-tag">Your codebase has never been this understood.</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     GSAP TIMELINE
+     ════════════════════════════════════════ -->
+<script>
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+
+// ── Helper: fade+slide a scene's children in sequence ──
+function sceneIn(el, atTime, dur) {
+  tl.set(el, { visibility: "visible" }, atTime);
+  tl.from(el, { opacity: 0, duration: dur || 0.6, ease: "power2.out" }, atTime);
+}
+function sceneOut(el, atTime, dur) {
+  tl.to(el, { opacity: 0, duration: dur || 0.5, ease: "power2.in" }, atTime);
+  tl.set(el, { visibility: "hidden" }, atTime + (dur || 0.5));
+}
+function fadeIn(sel, at, dur, from) {
+  const props = Object.assign({ opacity: 0 }, from || {});
+  tl.from(sel, { ...props, duration: dur || 0.5, ease: "power2.out" }, at);
+}
+
+// ══════════════════════════════════════════
+// SCENE 1 — Hook — 0–8s
+// ══════════════════════════════════════════
+tl.set("#s1", { visibility: "visible" }, 0);
+gsap.set("#s1-status", { opacity: 0 });
+gsap.set("#s1-h1",     { opacity: 0, y: 20 });
+
+tl.to("#s1-status", { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.4);
+tl.to("#s1-status", { scale: 1.03, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.inOut" }, 1.3);
+tl.to("#s1-h1",     { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, 1.8);
+// Fade scene out
+tl.to("#s1", { opacity: 0, duration: 0.6 }, 7.4);
+tl.set("#s1", { visibility: "hidden" }, 8);
+
+// ══════════════════════════════════════════
+// SCENE 2 — Problem — 8–18s
+// ══════════════════════════════════════════
+tl.set("#s2", { visibility: "visible", opacity: 0 }, 8);
+gsap.set(["#s2-fail", "#s2-sub"], { opacity: 0 });
+
+tl.to("#s2", { opacity: 1, duration: 0.5 }, 8.3);
+tl.to("#s2-fail", { opacity: 1, duration: 0.4, ease: "power2.out" }, 14.0);
+tl.to("#s2-sub",  { opacity: 1, duration: 0.5, ease: "power2.out" }, 15.2);
+tl.to("#s2", { opacity: 0, duration: 0.5 }, 17.5);
+tl.set("#s2", { visibility: "hidden" }, 18);
+
+// ══════════════════════════════════════════
+// SCENE 3 — Explorer Badges — 18–29s
+// ══════════════════════════════════════════
+tl.set("#s3", { visibility: "visible", opacity: 0 }, 18);
+gsap.set(["#s3-f1","#s3-f2","#s3-f3","#s3-f4","#s3-f5","#s3-f6","#s3-label","#s3-legend"], { opacity: 0 });
+
+tl.to("#s3", { opacity: 1, duration: 0.5 }, 18.4);
+// Badges cascade — staggered 0.6s
+[1,2,3,4,5,6].forEach(function(i, idx) {
+  tl.to("#s3-f" + i, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.4)" }, 20.0 + idx * 0.6);
+  // scale-pop: set to 0.85 first
+  tl.from("#s3-f" + i, { scaleX: 0.85, scaleY: 0.85 }, 20.0 + idx * 0.6);
+});
+tl.to("#s3-label",  { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 24.5);
+tl.from("#s3-label", { y: 14 }, 24.5);
+tl.to("#s3-legend", { opacity: 1, duration: 0.5 }, 25.2);
+tl.to("#s3", { opacity: 0, duration: 0.6 }, 28.3);
+tl.set("#s3", { visibility: "hidden" }, 29);
+
+// ══════════════════════════════════════════
+// SCENE 4 — Architecture Map — 29–42s
+// ══════════════════════════════════════════
+tl.set("#s4", { visibility: "visible", opacity: 0 }, 29);
+gsap.set(["#s4-n1","#s4-n2","#s4-n3","#s4-n4",
+          "#s4-e1","#s4-e2","#s4-e3","#s4-label"], { opacity: 0 });
+
+tl.to("#s4", { opacity: 1, duration: 0.6 }, 29.4);
+tl.to("#s4-kicker", { opacity: 1, duration: 0.5 }, 29.4);
+// Nodes animate in
+tl.to("#s4-n1", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 30.3);
+tl.from("#s4-n1", { scale: 0.7 }, 30.3);
+tl.to("#s4-n2", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 30.9);
+tl.from("#s4-n2", { scale: 0.7 }, 30.9);
+tl.to("#s4-n3", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 31.5);
+tl.from("#s4-n3", { scale: 0.7 }, 31.5);
+tl.to("#s4-n4", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 32.1);
+tl.from("#s4-n4", { scale: 0.7 }, 32.1);
+// Edges
+tl.to("#s4-e1", { opacity: 0.45, duration: 0.4 }, 30.9);
+tl.to("#s4-e2", { opacity: 0.45, duration: 0.4 }, 31.5);
+tl.to("#s4-e3", { opacity: 0.45, duration: 0.4 }, 32.1);
+tl.to("#s4-label", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 38.0);
+tl.from("#s4-label", { y: 16 }, 38.0);
+tl.to("#s4", { opacity: 0, duration: 0.6 }, 41.3);
+tl.set("#s4", { visibility: "hidden" }, 42);
+
+// ══════════════════════════════════════════
+// SCENE 5 — Hover Intelligence — 42–52s
+// ══════════════════════════════════════════
+tl.set("#s5", { visibility: "visible", opacity: 0 }, 42);
+gsap.set(["#s5-hover","#s5-label"], { opacity: 0 });
+
+tl.to("#s5", { opacity: 1, duration: 0.5 }, 42.4);
+tl.to("#s5-hover", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 46.0);
+tl.from("#s5-hover", { y: 18 }, 46.0);
+tl.to("#s5-label", { opacity: 1, duration: 0.5 }, 49.0);
+tl.to("#s5", { opacity: 0, duration: 0.5 }, 51.4);
+tl.set("#s5", { visibility: "hidden" }, 52);
+
+// ══════════════════════════════════════════
+// SCENE 6 — Ripple What-If — 52–68s
+// ══════════════════════════════════════════
+tl.set("#s6", { visibility: "visible", opacity: 0 }, 52);
+gsap.set(["#s6-diff","#s6-affected","#s6-af1","#s6-af2","#s6-af3","#s6-label"], { opacity: 0 });
+
+tl.to("#s6", { opacity: 1, duration: 0.4 }, 52.4);
+// Context menu in, then out
+tl.to("#s6-ctx", { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.4)" }, 53.0);
+tl.from("#s6-ctx", { scale: 0.92, opacity: 0 }, 53.0);
+tl.to("#s6-ctx", { opacity: 0, duration: 0.3 }, 56.8);
+// Diff panels slide in
+tl.to("#s6-diff", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 57.5);
+tl.from("#s6-diff", { y: 22 }, 57.5);
+// Affected files stagger
+tl.to("#s6-af1", { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, 60.0);
+tl.from("#s6-af1", { x: -20 }, 60.0);
+tl.to("#s6-af2", { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, 60.5);
+tl.from("#s6-af2", { x: -20 }, 60.5);
+tl.to("#s6-af3", { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, 61.0);
+tl.from("#s6-af3", { x: -20 }, 61.0);
+tl.to("#s6-label", { opacity: 1, duration: 0.5 }, 63.0);
+tl.to("#s6", { opacity: 0, duration: 0.6 }, 67.3);
+tl.set("#s6", { visibility: "hidden" }, 68);
+
+// ══════════════════════════════════════════
+// SCENE 7 — Blast Radius Card — 68–78s
+// ══════════════════════════════════════════
+tl.set("#s7", { visibility: "visible", opacity: 0 }, 68);
+gsap.set("#s7-green", { opacity: 0, scale: 0.9 });
+
+tl.to("#s7", { opacity: 1, duration: 0.4 }, 68.4);
+// Red card slams in
+tl.from("#s7-red", { scale: 0.88, opacity: 0, duration: 0.4, ease: "back.out(1.5)" }, 69.5);
+// Green card swaps in
+tl.to("#s7-red",   { opacity: 0, scale: 0.92, duration: 0.35, ease: "power2.in" }, 73.1);
+tl.to("#s7-green", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.4)" }, 73.5);
+tl.to("#s7", { opacity: 0, duration: 0.5 }, 77.4);
+tl.set("#s7", { visibility: "hidden" }, 78);
+
+// ══════════════════════════════════════════
+// SCENE 8 — Dossier — 78–92s
+// ══════════════════════════════════════════
+tl.set("#s8", { visibility: "visible", opacity: 0 }, 78);
+gsap.set(["#s8-t1","#s8-t2","#s8-t3","#s8-k1","#s8-k2","#s8-k3","#s8-term","#s8-label"], { opacity: 0 });
+
+tl.to("#s8", { opacity: 1, duration: 0.5 }, 78.4);
+tl.to("#s8-panel", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 79.0);
+tl.from("#s8-panel", { y: 24, opacity: 0 }, 79.0);
+tl.to("#s8-t1", { opacity: 1, duration: 0.35 }, 79.6);
+tl.to("#s8-t2", { opacity: 1, duration: 0.35 }, 80.2);
+tl.to("#s8-t3", { opacity: 1, duration: 0.35 }, 80.8);
+tl.to("#s8-k1", { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 81.5);
+tl.from("#s8-k1", { y: 14 }, 81.5);
+tl.to("#s8-k2", { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 82.0);
+tl.from("#s8-k2", { y: 14 }, 82.0);
+tl.to("#s8-k3", { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 82.5);
+tl.from("#s8-k3", { y: 14 }, 82.5);
+tl.to("#s8-term",  { opacity: 1, duration: 0.5 }, 84.0);
+tl.to("#s8-label", { opacity: 1, duration: 0.5 }, 86.5);
+tl.to("#s8", { opacity: 0, duration: 0.6 }, 91.3);
+tl.set("#s8", { visibility: "hidden" }, 92);
+
+// ══════════════════════════════════════════
+// SCENE 9 — Security — 92–100s
+// ══════════════════════════════════════════
+tl.set("#s9", { visibility: "visible", opacity: 0 }, 92);
+gsap.set(["#s9-r1","#s9-r2","#s9-r3","#s9-r4","#s9-r5","#s9-label"], { opacity: 0 });
+
+tl.to("#s9", { opacity: 1, duration: 0.5 }, 92.4);
+[1,2,3,4,5].forEach(function(i, idx) {
+  tl.to("#s9-r" + i, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 93.0 + idx * 0.6);
+  tl.from("#s9-r" + i, { x: -24 }, 93.0 + idx * 0.6);
+});
+tl.to("#s9-label", { opacity: 1, duration: 0.5 }, 96.5);
+tl.to("#s9", { opacity: 0, duration: 0.5 }, 99.4);
+tl.set("#s9", { visibility: "hidden" }, 100);
+
+// ══════════════════════════════════════════
+// SCENE 10 — Stats — 100–107s
+// ══════════════════════════════════════════
+tl.set("#s10", { visibility: "visible", opacity: 0 }, 100);
+gsap.set(["#s10-c1","#s10-c2","#s10-c3","#s10-c4","#s10-label"], { opacity: 0 });
+
+tl.to("#s10", { opacity: 1, duration: 0.5 }, 100.4);
+[1,2,3,4].forEach(function(i, idx) {
+  tl.to("#s10-c" + i, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 100.8 + idx * 0.6);
+  tl.from("#s10-c" + i, { scale: 0.78, opacity: 0 }, 100.8 + idx * 0.6);
+});
+tl.to("#s10-label", { opacity: 1, duration: 0.5 }, 103.5);
+tl.to("#s10", { opacity: 0, duration: 0.5 }, 106.4);
+tl.set("#s10", { visibility: "hidden" }, 107);
+
+// ══════════════════════════════════════════
+// SCENE 11 — Logo — 107–110s
+// ══════════════════════════════════════════
+tl.set("#s11", { visibility: "visible", opacity: 0 }, 107);
+gsap.set(["#s11-kicker","#s11-rule","#s11-title","#s11-sub","#s11-tag"], { opacity: 0 });
+
+tl.to("#s11", { opacity: 1, duration: 0.8 }, 107.0);
+tl.to("#s11-kicker", { opacity: 1, duration: 0.4 }, 107.2);
+tl.to("#s11-rule",   { opacity: 1, duration: 0.4 }, 107.4);
+tl.to("#s11-title",  { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 107.5);
+tl.from("#s11-title",  { y: 16 }, 107.5);
+tl.to("#s11-sub",    { opacity: 1, duration: 0.4 }, 107.9);
+tl.to("#s11-tag",    { opacity: 1, duration: 0.5 }, 108.6);
+// Fade to black at 109.5s
+tl.to("#s11", { opacity: 0, duration: 0.5 }, 109.5);
+
+window.__timelines["arch-storyteller-brag"] = tl;
+tl.seek(0);
+</script>
+
+</div><!-- #root -->
+</body>
+</html>
