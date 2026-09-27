@@ -149,7 +149,7 @@
 		},
 		"keybindings": [
 			{
-				"command": "storyteller.usages",
+				"command": "storyteller.previewDossier",
 				"key": "ctrl+alt+d",
 				"mac": "cmd+alt+d",
 				"when": "editorTextFocus"
@@ -212,7 +212,7 @@
 		"compile": "tsc -p ./ && tsc -p ./tsconfig.webview.json && node scripts/finalize_webview.mjs",
 		"watch": "tsc -w -p ./ & tsc -w -p ./tsconfig.webview.json",
 		"preview:map": "node scripts/preview_map.mjs",
-		"test:locate": "node scripts/test_locate.mjs"
+		"test:locate": "npm run compile && node scripts/test_locate.mjs"
 	},
 	"devDependencies": {
 		"@types/node": "^20.19.43",

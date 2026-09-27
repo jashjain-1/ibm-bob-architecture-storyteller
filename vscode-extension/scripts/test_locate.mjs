@@ -12,12 +12,14 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { tmpdir } from "node:os";
+
 const require = createRequire(import.meta.url);
 const locate = require("../dist/engine/locate.js");
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ENGINE_DIR = path.join(REPO, "tools", "storyteller-engine");
-const DEMO = "C:\\Users\\Harsh\\Desktop\\demo_IBM\\galaxium-travels";
+const DEMO = path.join(tmpdir(), "storyteller-foreign-workspace-mock");
 
 let failures = 0;
 

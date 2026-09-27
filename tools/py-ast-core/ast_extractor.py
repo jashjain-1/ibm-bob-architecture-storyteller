@@ -371,27 +371,29 @@ def _extract_go_native(source: str, file_path: str) -> tuple[list[dict], list[di
             elif tokens:
                 params.append({"name": tokens[0], "type": ""})
 
-        brace_start = source.index("{", m.start())
-        depth = 0
-        end_idx = brace_start
-        for i, ch in enumerate(source[brace_start:], brace_start):
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    end_idx = i
-                    break
-        end_line = source[:end_idx].count("\n") + 1
-
-        body = source[brace_start:end_idx]
-        calls = list(
-            dict.fromkeys(
-                c
-                for c in _GO_CALL_RE.findall(body)
-                if c not in {"if", "for", "switch", "select", "go", "defer", "return", "make", "len", "cap", "append", "copy", "delete", "new"}
+        brace_start = source.find("{", m.start())
+        calls: list[str] = []
+        end_line = lineno
+        if brace_start != -1 and brace_start < m.start() + 500:
+            depth = 0
+            end_idx = brace_start
+            for i, ch in enumerate(source[brace_start:], brace_start):
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        end_idx = i
+                        break
+            end_line = source[:end_idx].count("\n") + 1
+            body = source[brace_start:end_idx]
+            calls = list(
+                dict.fromkeys(
+                    c
+                    for c in _GO_CALL_RE.findall(body)
+                    if c not in {"if", "for", "switch", "select", "go", "defer", "return", "make", "len", "cap", "append", "copy", "delete", "new"}
+                )
             )
-        )
 
         qual_name = f"{recv.split()[-1].lstrip('*')}.{name}" if recv else name
         sym_id = f"{file_path}::{qual_name}"
@@ -546,10 +548,13 @@ def _extract_ts_native(source: str, file_path: str, language: str) -> tuple[list
         sym_id = f"{file_path}::{name}"
         exported = bool(m.group("export"))
 
+        arrow_pos = source.find("=>", m.start())
         brace_pos = source.find("{", m.start())
         end_line = lineno
         calls: list[str] = []
-        if brace_pos != -1 and brace_pos < m.start() + 500:
+        _skip = {"if", "for", "while", "switch", "catch", "function", "return", "typeof", "instanceof"}
+
+        if brace_pos != -1 and (arrow_pos == -1 or brace_pos < arrow_pos + 100) and brace_pos < m.start() + 500:
             end_line = _ts_end_line(source, brace_pos)
             end_idx = brace_pos
             depth = 0
@@ -562,7 +567,19 @@ def _extract_ts_native(source: str, file_path: str, language: str) -> tuple[list
                         end_idx = i
                         break
             body = source[brace_pos:end_idx]
-            _skip = {"if", "for", "while", "switch", "catch", "function", "return", "typeof", "instanceof"}
+            calls = list(
+                dict.fromkeys(
+                    c for c in _TS_CALL_RE.findall(body) if c.split(".")[0] not in _skip
+                )
+            )
+        elif arrow_pos != -1 and arrow_pos < m.start() + 200:
+            # Concise arrow function
+            next_semi = source.find(";", arrow_pos)
+            next_nl = source.find("\n", arrow_pos)
+            candidates = [idx for idx in (next_semi, next_nl) if idx != -1]
+            end_idx = min(candidates) if candidates else len(source)
+            body = source[arrow_pos + 2:end_idx]
+            end_line = source[:end_idx].count("\n") + 1
             calls = list(
                 dict.fromkeys(
                     c for c in _TS_CALL_RE.findall(body) if c.split(".")[0] not in _skip

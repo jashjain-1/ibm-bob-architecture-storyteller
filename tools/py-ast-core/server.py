@@ -8,7 +8,9 @@ FastAPI-based MCP server exposing two tools:
 Conforms to tool-schemas.json interface contract.
 """
 
-from fastapi import FastAPI
+import os
+from pathlib import Path
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -57,8 +59,11 @@ class DetectDynamicInvocationsRequest(BaseModel):
 @app.post("/tools/extract_repo_ast")
 async def extract_repo_ast(request: ExtractRepoAstRequest):
     """Scans repository files and extracts whole-codebase AST into normalized JSON."""
+    p = Path(request.repo_path).resolve()
+    if not p.is_dir():
+        raise HTTPException(status_code=400, detail=f"Directory not found: {request.repo_path}")
     return await extract_repo_ast_impl(
-        repo_path=request.repo_path,
+        repo_path=str(p),
         languages=request.languages,
         include_patterns=request.include_patterns,
         exclude_patterns=request.exclude_patterns,
@@ -68,8 +73,11 @@ async def extract_repo_ast(request: ExtractRepoAstRequest):
 @app.post("/tools/detect_dynamic_invocations")
 async def detect_dynamic_invocations(request: DetectDynamicInvocationsRequest):
     """Scans AST for dynamic invocation patterns."""
+    p = Path(request.file_path).resolve()
+    if not p.is_file():
+        raise HTTPException(status_code=400, detail=f"File not found: {request.file_path}")
     return await detect_dynamic_invocations_impl(
-        file_path=request.file_path,
+        file_path=str(p),
         symbol_id=request.symbol_id,
         patterns=request.patterns,
     )
@@ -82,4 +90,4 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="127.0.0.1", port=8001)

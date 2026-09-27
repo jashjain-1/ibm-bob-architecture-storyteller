@@ -376,9 +376,11 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", f"{content_type}; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "content-type")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        origin = self.headers.get("Origin") or ""
+        if not origin or origin.startswith(("http://127.0.0.1", "http://localhost", "vscode-webview://", "vscode-file://")):
+            self.send_header("Access-Control-Allow-Origin", origin or "*")
+            self.send_header("Access-Control-Allow-Headers", "content-type")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)
@@ -388,7 +390,7 @@ class _Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             return {}
-        if length <= 0:
+        if length <= 0 or length > 50 * 1024 * 1024:  # 50MB maximum body
             return {}
         raw = self.rfile.read(length)
         try:
@@ -425,21 +427,30 @@ class _Handler(BaseHTTPRequestHandler):
             if path == "/tree":
                 return self._send(self.engine.tree())
             if path == "/context":
-                lines = int(one("lines", "40") or 40)
-                return self._send(self.engine.context(one("symbol"), lines))
+                raw_lines = one("lines", "40")
+                try:
+                    lines = max(0, min(10000, int(raw_lines)))
+                except ValueError:
+                    lines = 40
+                sym_needle = one("symbol")[:1000]
+                return self._send(self.engine.context(sym_needle, lines))
             if path == "/usages":
-                return self._send(self.engine.usages(one("symbol")))
+                sym_needle = one("symbol")[:1000]
+                return self._send(self.engine.usages(sym_needle))
             if path == "/delta":
                 return self._send(self.engine.delta())
             if path == "/index":
                 if method != "POST":
                     return self._send({"error": "POST required"}, 405)
                 body = self._body()
+                llm_url = str(body.get("llm_url") or "").strip() or None
+                if llm_url and not (llm_url.startswith("http://") or llm_url.startswith("https://")):
+                    return self._send({"error": "Invalid llm_url protocol"}, 400)
                 return self._send(self.engine.index(
                     force=bool(body.get("force")),
                     force_insights=bool(body.get("force_insights")),
                     bob_command=body.get("bob_command") or None,
-                    llm_url=body.get("llm_url") or None,
+                    llm_url=llm_url,
                     llm_model=body.get("llm_model") or None,
                 ))
             if path == "/dossier":
@@ -449,7 +460,9 @@ class _Handler(BaseHTTPRequestHandler):
                 # Provider settings ride along so the exported dossier can be
                 # written by Bob / the local LLM, same as the index report.
                 bob_command = body.get("bob_command") or None
-                llm_url = body.get("llm_url") or None
+                llm_url = str(body.get("llm_url") or "").strip() or None
+                if llm_url and not (llm_url.startswith("http://") or llm_url.startswith("https://")):
+                    return self._send({"error": "Invalid llm_url protocol"}, 400)
                 llm_model = body.get("llm_model") or None
                 if wants_pdf:
                     return self._send(self.engine.render_pdf(

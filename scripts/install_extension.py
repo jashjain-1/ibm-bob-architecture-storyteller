@@ -54,12 +54,30 @@ VSCODE_EXT_DIR = USER_HOME / ".vscode" / "extensions" / EXT_DIRNAME
 BOBIDE_EXT_DIR = USER_HOME / ".bobide" / "extensions" / EXT_DIRNAME
 
 
+def ensure_dependencies():
+    print("[0/4] Verifying extension build dependencies...")
+    node_modules = EXT_DIR / "node_modules"
+    if not node_modules.exists():
+        print("  Installing npm dependencies in vscode-extension...")
+        res = subprocess.run(
+            "npm install",
+            cwd=EXT_DIR,
+            shell=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace"
+        )
+        if res.returncode != 0:
+            print(f"[ERROR] npm install failed:\n{res.stderr}")
+            sys.exit(res.returncode)
+        print("  [OK] npm dependencies installed.")
+
+
 def check_payload():
-    print("[0/4] Checking extension payload...")
     missing = [name for name in PAYLOAD if not (EXT_DIR / name).exists()]
     if missing:
         print(f"[ERROR] Missing from {EXT_DIR}: {', '.join(missing)}")
-        print("        Run 'npm run compile' first (it builds dist/).")
         sys.exit(1)
     engine = WORKSPACE_ROOT / "tools" / "storyteller-engine" / "cli.py"
     if engine.exists():
@@ -215,8 +233,9 @@ def main():
     print("Architecture Storyteller - Polyglot IDE Installer")
     print("=" * 60)
 
-    check_payload()
+    ensure_dependencies()
     compile_extension()
+    check_payload()
     vsix_path = package_vsix()
 
     # Direct VSIX installation (standard IDE registry)

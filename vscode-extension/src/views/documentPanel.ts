@@ -39,12 +39,18 @@ export function showDocumentPanel(
         panels.set(options.key, panel);
     }
     panel.title = options.title;
-    panel.webview.html = documentShell({
-        title: options.title,
-        bodyHtml: options.bodyHtml,
-        styleUri: panel.webview.asWebviewUri(styleUri).toString(),
-        cspSource: panel.webview.cspSource,
-    });
+
+    const trimmed = options.bodyHtml.trim();
+    if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+        panel.webview.html = options.bodyHtml;
+    } else {
+        panel.webview.html = documentShell({
+            title: options.title,
+            bodyHtml: options.bodyHtml,
+            styleUri: panel.webview.asWebviewUri(styleUri).toString(),
+            cspSource: panel.webview.cspSource,
+        });
+    }
     panel.reveal(vscode.ViewColumn.Beside, true);
     return panel;
 }
