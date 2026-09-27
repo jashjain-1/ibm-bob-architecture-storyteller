@@ -1,0 +1,78 @@
+[
+  {
+    "name": "extract_repo_ast",
+    "description": "Scans repository files and extracts whole-codebase AST including exports, imports, functions, classes, types, and entry points into normalized JSON. Supports Go, Python, TypeScript, and JavaScript via Tree-Sitter and native AST modules.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "repo_path": {
+          "type": "string",
+          "description": "Absolute path to the repository root directory."
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["go", "typescript", "javascript", "python"]
+          },
+          "description": "Languages to parse. Defaults to auto-detect from file extensions if omitted."
+        },
+        "include_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Glob patterns for files to include (e.g., ['src/**/*.ts', 'pkg/**/*.go'])."
+        },
+        "exclude_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Glob patterns for files to exclude (e.g., ['node_modules/**', 'vendor/**'])."
+        }
+      },
+      "required": ["repo_path"]
+    },
+    "returns": {
+      "type": "object",
+      "description": "Normalized AST graph containing all symbols, their types, import/export edges, and call relationships."
+    }
+  },
+  {
+    "name": "detect_dynamic_invocations",
+    "description": "Scans AST for dynamic reflection, dynamic module imports, runtime eval, string-based function dispatch, event emitter registrations, and environment-conditional code paths. Returns flagged patterns with file locations and confidence scores.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to the file to scan."
+        },
+        "symbol_id": {
+          "type": "string",
+          "description": "Optional. Qualified symbol name to scope the scan to a specific function or class."
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["reflection", "dynamic_import", "eval", "event_emitter", "env_conditional", "string_dispatch"]
+          },
+          "description": "Specific dynamic patterns to scan for. Defaults to all if omitted."
+        }
+      },
+      "required": ["file_path"]
+    },
+    "returns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pattern_type": { "type": "string" },
+          "file_path": { "type": "string" },
+          "line_number": { "type": "integer" },
+          "symbol_id": { "type": "string" },
+          "confidence": { "type": "number" },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+]

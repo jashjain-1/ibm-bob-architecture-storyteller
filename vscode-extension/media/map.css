@@ -1,0 +1,202 @@
+/*
+ * map.css
+ * -------
+ * Styles for the storyteller webviews. Colours come from the host theme so the
+ * map looks native in VS Code, IBM Bob and in a plain browser (fallbacks).
+ * No emoji, no decorative gradients: the layout carries the meaning.
+ */
+
+:root {
+  --ink: var(--vscode-foreground, #1f2328);
+  --muted: var(--vscode-descriptionForeground, #5b6673);
+  --line: var(--vscode-panel-border, #d8dee6);
+  --panel: var(--vscode-sideBar-background, #f6f8fa);
+  --editor: var(--vscode-editor-background, #ffffff);
+  --accent: var(--vscode-textLink-foreground, #0969da);
+  --badge: var(--vscode-badge-background, #e8f0f9);
+  --badge-ink: var(--vscode-badge-foreground, #0969da);
+  --warn: var(--vscode-editorWarning-foreground, #9a6700);
+  --danger: var(--vscode-errorForeground, #cf222e);
+  --ok: var(--vscode-testing-iconPassed, #1a7f37);
+  --hover: var(--vscode-list-hoverBackground, rgba(0, 0, 0, 0.05));
+  --selected: var(--vscode-list-activeSelectionBackground, rgba(9, 105, 218, 0.12));
+  --mono: var(--vscode-editor-font-family, "Cascadia Mono", Consolas, monospace);
+  --ui: var(--vscode-font-family, "Segoe UI", system-ui, sans-serif);
+}
+
+body.vscode-dark,
+body.vscode-high-contrast {
+  --ink: var(--vscode-foreground, #e6edf3);
+  --muted: var(--vscode-descriptionForeground, #8b949e);
+  --line: var(--vscode-panel-border, #30363d);
+  --panel: var(--vscode-sideBar-background, #161b22);
+  --editor: var(--vscode-editor-background, #0d1117);
+  --accent: var(--vscode-textLink-foreground, #58a6ff);
+  --badge: var(--vscode-badge-background, #21262d);
+  --badge-ink: var(--vscode-badge-foreground, #79c0ff);
+  --warn: var(--vscode-editorWarning-foreground, #d29922);
+  --danger: var(--vscode-errorForeground, #f85149);
+  --ok: var(--vscode-testing-iconPassed, #3fb950);
+  --hover: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.08));
+  --selected: var(--vscode-list-activeSelectionBackground, rgba(56, 139, 253, 0.2));
+}
+
+@media (prefers-color-scheme: dark) {
+  body:not(.vscode-light) {
+    --ink: var(--vscode-foreground, #e6edf3);
+    --muted: var(--vscode-descriptionForeground, #8b949e);
+    --line: var(--vscode-panel-border, #30363d);
+    --panel: var(--vscode-sideBar-background, #161b22);
+    --editor: var(--vscode-editor-background, #0d1117);
+    --accent: var(--vscode-textLink-foreground, #58a6ff);
+    --badge: var(--vscode-badge-background, #21262d);
+    --badge-ink: var(--vscode-badge-foreground, #79c0ff);
+    --warn: var(--vscode-editorWarning-foreground, #d29922);
+    --danger: var(--vscode-errorForeground, #f85149);
+    --ok: var(--vscode-testing-iconPassed, #3fb950);
+    --hover: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.08));
+    --selected: var(--vscode-list-activeSelectionBackground, rgba(56, 139, 253, 0.2));
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* Elements toggled with the `hidden` attribute must stay hidden even when a
+   class sets a display mode (flex/grid), otherwise overlays cover the map. */
+[hidden] { display: none !important; }
+
+body.storyteller {
+  margin: 0;
+  font-family: var(--ui);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--ink);
+  background: var(--editor);
+}
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* -- toolbar --------------------------------------------------------------- */
+
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.toolbar .repo { font-weight: 600; }
+.toolbar .meta { color: var(--muted); font-size: 11px; }
+.toolbar .spacer { flex: 1; }
+.toolbar input[type="search"] {
+  min-width: 220px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 3px;
+  background: var(--editor); color: var(--ink); font-family: var(--ui); font-size: 12px;
+}
+.levels { display: flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.levels button {
+  border: 0; padding: 4px 10px; background: var(--editor); color: var(--ink);
+  cursor: pointer; font-size: 11px; border-right: 1px solid var(--line);
+}
+.levels button:last-child { border-right: 0; }
+.levels button[aria-pressed="true"] { background: var(--badge); color: var(--badge-ink); font-weight: 600; }
+
+button.action, button.ghost {
+  border: 1px solid var(--line); border-radius: 3px; padding: 4px 10px; cursor: pointer;
+  background: var(--editor); color: var(--ink); font-size: 11px;
+}
+button.action:hover, button.ghost:hover { border-color: var(--accent); color: var(--accent); }
+button[disabled] { opacity: .5; cursor: default; }
+
+.banner {
+  padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--line);
+  background: var(--badge); color: var(--badge-ink);
+}
+.banner.error { background: var(--editor); color: var(--danger); border-color: var(--danger); }
+
+/* -- layout ---------------------------------------------------------------- */
+
+.layout { flex: 1; display: grid; grid-template-columns: minmax(320px, 46%) 1fr; min-height: 0; }
+.pane { overflow: auto; padding: 8px 4px 24px 4px; }
+.pane-tree { border-right: 1px solid var(--line); background: var(--panel); }
+.pane-detail { padding: 12px 16px 32px 16px; }
+
+/* -- tree ------------------------------------------------------------------ */
+
+.row {
+  display: flex; align-items: baseline; gap: 6px; padding: 2px 8px; cursor: default;
+  white-space: nowrap; border-left: 2px solid transparent;
+}
+.row:hover { background: var(--hover); }
+.row.selected { background: var(--selected); border-left-color: var(--accent); }
+.row.clickable { cursor: pointer; }
+.chev {
+  width: 12px; color: var(--muted); font-family: var(--mono); font-size: 10px; flex: none;
+  text-align: center;
+}
+.label { overflow: hidden; text-overflow: ellipsis; }
+.subject { font-family: var(--mono); }
+.kind { color: var(--muted); font-size: 10px; flex: none; }
+.count { color: var(--muted); font-size: 10px; flex: none; }
+.path { color: var(--muted); font-size: 10px; font-family: var(--mono); }
+.rank { color: var(--muted); font-size: 10px; font-family: var(--mono); width: 22px; flex: none; }
+
+/* -- badges ---------------------------------------------------------------- */
+
+.tag {
+  display: inline-block; padding: 0 5px; border-radius: 8px; font-size: 10px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  margin-right: 4px; white-space: nowrap;
+}
+.tag.warn { color: var(--warn); border-color: var(--warn); }
+.tag.danger { color: var(--danger); border-color: var(--danger); }
+.tag.ok { color: var(--ok); border-color: var(--ok); }
+.tag.accent { color: var(--badge-ink); background: var(--badge); border-color: var(--badge); }
+
+/* -- detail ---------------------------------------------------------------- */
+
+.detail-head h2 { margin: 0 0 2px 0; font-family: var(--mono); font-size: 15px; color: var(--ink); }
+.detail-head .where { color: var(--muted); font-size: 11px; cursor: pointer; text-decoration: underline; }
+.detail-head .where:hover { color: var(--accent); }
+.callout {
+  border-left: 3px solid var(--accent); background: var(--panel); padding: 8px 10px; margin: 10px 0;
+  color: var(--ink);
+}
+.callout .src { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+.metrics { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; font-size: 11px; color: var(--muted); }
+.metrics b { color: var(--ink); font-weight: 600; }
+h4 { margin: 14px 0 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+ul.links { list-style: none; margin: 0; padding: 0; }
+ul.links li { padding: 1px 0; font-family: var(--mono); font-size: 11px; color: var(--ink); }
+ul.links li.clickable { cursor: pointer; }
+ul.links li.clickable:hover { color: var(--accent); }
+.muted { color: var(--muted); }
+pre.source {
+  margin: 6px 0 0 0; padding: 8px 10px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 3px; overflow: auto; font-family: var(--mono); font-size: 11px; line-height: 1.45;
+  max-height: 340px; color: var(--ink);
+}
+.empty { color: var(--muted); padding: 16px 8px; font-size: 12px; }
+
+/* -- graph ----------------------------------------------------------------- */
+
+.graph-overlay {
+  position: fixed; inset: 0; background: var(--editor); display: flex; flex-direction: column;
+  z-index: 10; border-top: 1px solid var(--line);
+}
+.graph-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.graph-canvas { flex: 1; overflow: auto; padding: 8px; }
+.graph-canvas svg { width: 100%; height: 100%; }
+.graph-canvas .node-label { font-size: 9px; font-family: var(--ui); }
+.graph-canvas .edge { stroke: var(--line); }
+.graph-canvas .node { cursor: pointer; }
+
+/* -- status ---------------------------------------------------------------- */
+
+.status {
+  padding: 4px 12px; border-top: 1px solid var(--line); background: var(--panel);
+  color: var(--muted); font-size: 11px; display: flex; gap: 14px; flex-wrap: wrap;
+}
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  .pane-tree { border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; }
+}

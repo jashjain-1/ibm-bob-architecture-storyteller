@@ -1,0 +1,21 @@
+# Architecture Storyteller - packaging rules
+#
+# The extension ships compiled JavaScript only. It deliberately contains no
+# copy of the engine: the engine is resolved from the workspace at runtime
+# (tools/storyteller-engine/cli.py, or storyteller.enginePath).
+
+.vscode/**
+src/**
+node_modules/**
+scripts/**
+orchestrator/**
+tools/**
+tsconfig.json
+tsconfig.webview.json
+package-lock.json
+
+# Development-only Python utilities live in scripts/** (already excluded).
+
+# Sources and maps: dist/*.js is all that is needed at runtime.
+**/*.ts
+**/*.map

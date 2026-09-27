@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2020",
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "sourceMap": true
+  },
+  "include": ["src/webview/map.ts", "src/engine/types.ts"],
+  "exclude": ["node_modules", ".vscode-test"]
+}

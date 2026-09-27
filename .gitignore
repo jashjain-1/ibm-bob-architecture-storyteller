@@ -1,0 +1,111 @@
+# ==============================================================================
+# Architecture Storyteller 2.0 - Root .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Python
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Python Testing & Caches
+.pytest_cache/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------------------------
+# Node.js & TypeScript
+# ------------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# TypeScript build outputs & build info
+dist/
+out/
+*.tsbuildinfo
+.tscache/
+
+# ------------------------------------------------------------------------------
+# VS Code & Extension Development
+# ------------------------------------------------------------------------------
+# Packaged VSIX archives
+*.vsix
+
+# VS Code test harness runtimes
+.vscode-test/
+.vscode-test-web/
+
+# Preserve team workspace configurations, ignore user-specific state & logs
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vscode/*.log
+
+# ------------------------------------------------------------------------------
+# Architecture Storyteller Caches & Test Outputs
+# ------------------------------------------------------------------------------
+# Engine model cache and dynamic insight storage (regenerated on demand)
+.storyteller/
+
+# Generated dossier reports, diagrams, and PDF exports
+output/
+*.pdf
+
+# ------------------------------------------------------------------------------
+# IDEs & System Files
+# ------------------------------------------------------------------------------
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.log
+*.tmp
+*.temp

@@ -1,0 +1,17 @@
+# IBM Bob 2.0 – py-ast-core dependencies
+# ----------------------------------------
+# Core PDF engine
+reportlab>=4.0.0
+
+# Image processing (required by reportlab for image embedding)
+pillow>=10.0.0
+
+# Topology diagram generation
+matplotlib>=3.8.0
+
+# Tree-sitter primary engine (optional; native fallback used when absent)
+# tree-sitter>=0.21.0
+# tree-sitter-python>=0.21.0
+# tree-sitter-go>=0.21.0
+# tree-sitter-typescript>=0.21.0
+# tree-sitter-javascript>=0.21.0

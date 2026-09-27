@@ -1,0 +1,8 @@
+# Architecture Storyteller - VS Code Extension .gitignore
+node_modules/
+dist/
+out/
+*.vsix
+.vscode-test/
+*.tsbuildinfo
+*.log

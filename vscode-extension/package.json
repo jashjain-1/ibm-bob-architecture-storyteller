@@ -1,0 +1,222 @@
+{
+	"name": "architecture-storyteller",
+	"displayName": "Architecture Storyteller",
+	"description": "Tree-first architecture map, call-site lookups, symbol summaries and a publication PDF dossier, served by the local storyteller engine.",
+	"version": "2.1.1",
+	"publisher": "ibm-bob",
+	"engines": {
+		"vscode": "^1.88.0"
+	},
+	"categories": [
+		"Visualization",
+		"Programming Languages",
+		"Other"
+	],
+	"main": "./dist/extension.js",
+	"activationEvents": [
+		"onStartupFinished",
+		"onCommand:storyteller.mindmap",
+		"onCommand:storyteller.configureScope",
+		"onCommand:storyteller.setEngineDirectory",
+		"onCommand:storyteller.context",
+		"onCommand:storyteller.usages",
+		"onCommand:storyteller.inspectDependencies",
+		"onCommand:storyteller.askBobAI",
+		"onCommand:storyteller.index",
+		"onCommand:storyteller.pdf",
+		"onCommand:storyteller.previewDossier",
+		"onCommand:storyteller.exportDossier",
+		"onLanguage:python",
+		"onLanguage:typescript",
+		"onLanguage:javascript",
+		"onLanguage:go"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "storyteller.mindmap",
+				"title": "Open Architecture Map",
+				"category": "Architecture Storyteller",
+				"icon": "$(type-hierarchy-sub)"
+			},
+			{
+				"command": "storyteller.context",
+				"title": "Show Symbol Context",
+				"category": "Architecture Storyteller",
+				"icon": "$(symbol-class)"
+			},
+			{
+				"command": "storyteller.usages",
+				"title": "Show Call Sites",
+				"category": "Architecture Storyteller",
+				"icon": "$(references)"
+			},
+			{
+				"command": "storyteller.inspectDependencies",
+				"title": "Inspect Code Dependencies & Callers",
+				"category": "Architecture Storyteller",
+				"icon": "$(references)"
+			},
+			{
+				"command": "storyteller.askBobAI",
+				"title": "Show Symbol Summary & Provider Status",
+				"category": "Architecture Storyteller",
+				"icon": "$(comment-discussion)"
+			},
+			{
+				"command": "storyteller.index",
+				"title": "Re-index Workspace",
+				"category": "Architecture Storyteller",
+				"icon": "$(sync)"
+			},
+			{
+				"command": "storyteller.setEngineDirectory",
+				"title": "Set Engine Directory...",
+				"category": "Architecture Storyteller"
+			},
+			{
+				"command": "storyteller.configureScope",
+				"title": "Configure Dossier Depth...",
+				"category": "Architecture Storyteller",
+				"icon": "$(gear)"
+			},
+			{
+				"command": "storyteller.previewDossier",
+				"title": "Preview Dossier",
+				"category": "Architecture Storyteller",
+				"icon": "$(preview)"
+			},
+			{
+				"command": "storyteller.pdf",
+				"title": "Export Dossier PDF",
+				"category": "Architecture Storyteller",
+				"icon": "$(file-pdf)"
+			},
+			{
+				"command": "storyteller.exportDossier",
+				"title": "Preview or Export Dossier...",
+				"category": "Architecture Storyteller",
+				"icon": "$(book)"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"command": "storyteller.usages",
+					"group": "7_modification@1",
+					"when": "editorHasSelection || editorTextFocus"
+				},
+				{
+					"command": "storyteller.context",
+					"group": "7_modification@2",
+					"when": "editorHasSelection || editorTextFocus"
+				},
+				{
+					"command": "storyteller.mindmap",
+					"group": "7_modification@3",
+					"when": "editorHasSelection"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "storyteller.mindmap"
+				},
+				{
+					"command": "storyteller.context"
+				},
+				{
+					"command": "storyteller.usages"
+				},
+				{
+					"command": "storyteller.inspectDependencies"
+				},
+				{
+					"command": "storyteller.askBobAI"
+				},
+				{
+					"command": "storyteller.index"
+				},
+				{
+					"command": "storyteller.previewDossier"
+				},
+				{
+					"command": "storyteller.pdf"
+				},
+				{
+					"command": "storyteller.exportDossier"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "storyteller.usages",
+				"key": "ctrl+alt+d",
+				"mac": "cmd+alt+d",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "storyteller.mindmap",
+				"key": "ctrl+alt+m",
+				"mac": "cmd+alt+m",
+				"when": "editorTextFocus"
+			}
+		],
+		"configuration": {
+			"title": "Architecture Storyteller",
+			"properties": {
+				"storyteller.pythonPath": {
+					"type": "string",
+					"default": "",
+					"description": "Python interpreter used to run the engine. Empty uses a workspace virtualenv, else python3/python."
+				},
+				"storyteller.enginePath": {
+					"type": "string",
+					"default": "",
+					"description": "Directory containing cli.py. Empty uses tools/storyteller-engine in the open folder (or the repository enclosing the active file)."
+				},
+				"storyteller.enableHover": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show symbol summaries and metrics when hovering code. Answers come from the running engine and are cached."
+				},
+				"storyteller.defaultDepth": {
+					"type": "number",
+					"default": 2,
+					"enum": [
+						1,
+						2,
+						3
+					],
+					"description": "Default detail level: 1 executive, 2 engineering, 3 forensic. It changes map detail, hover depth and dossier length."
+				},
+				"storyteller.bobCommand": {
+					"type": "string",
+					"default": "",
+					"description": "IBM Bob or agent command used to generate symbol summaries. May contain {request}/{response} placeholders, otherwise the prompt is passed on stdin and JSON is read from stdout."
+				},
+				"storyteller.llmUrl": {
+					"type": "string",
+					"default": "",
+					"description": "Ollama-compatible endpoint (for example http://127.0.0.1:11434) used when no Bob command is configured."
+				},
+				"storyteller.llmModel": {
+					"type": "string",
+					"default": "",
+					"description": "Model name for the local LLM provider. Empty lets the endpoint choose."
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./ && tsc -p ./tsconfig.webview.json && node scripts/finalize_webview.mjs",
+		"watch": "tsc -w -p ./ & tsc -w -p ./tsconfig.webview.json",
+		"preview:map": "node scripts/preview_map.mjs",
+		"test:locate": "node scripts/test_locate.mjs"
+	},
+	"devDependencies": {
+		"@types/node": "^20.19.43",
+		"@types/vscode": "^1.88.0",
+		"typescript": "^5.9.3"
+	}
+}
