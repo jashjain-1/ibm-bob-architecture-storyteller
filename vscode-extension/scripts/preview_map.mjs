@@ -45,6 +45,7 @@ function findCli(repo) {
   const candidates = [
     join(repo, "tools", "storyteller-engine", "cli.py"),
     join(extensionRoot, "tools", "storyteller-engine", "cli.py"),
+    join(extensionRoot, "..", "tools", "storyteller-engine", "cli.py"),
   ];
   return candidates.find((candidate) => existsSync(candidate));
 }
