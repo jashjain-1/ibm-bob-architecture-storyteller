@@ -151,14 +151,12 @@
 			{
 				"command": "storyteller.previewDossier",
 				"key": "ctrl+alt+d",
-				"mac": "cmd+alt+d",
-				"when": "editorTextFocus"
+				"mac": "cmd+alt+d"
 			},
 			{
 				"command": "storyteller.mindmap",
 				"key": "ctrl+alt+m",
-				"mac": "cmd+alt+m",
-				"when": "editorTextFocus"
+				"mac": "cmd+alt+m"
 			}
 		],
 		"configuration": {
