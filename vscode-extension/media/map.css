@@ -103,42 +103,6 @@ button.action, button.ghost {
 button.action:hover, button.ghost:hover { border-color: var(--accent); color: var(--accent); }
 button[disabled] { opacity: .5; cursor: default; }
 
-.identity-banner {
-  display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
-  background: var(--editor);
-}
-.identity-banner h1 {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.35;
-  color: var(--ink);
-}
-.identity-banner p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-.identity-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.identity-pills li {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--muted);
-  font-size: 10px;
-}
-
 .banner {
   padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--line);
   background: var(--badge); color: var(--badge-ink);
@@ -233,8 +197,6 @@ pre.source {
 }
 
 @media (max-width: 860px) {
-  .identity-banner { padding: 8px 10px; }
-  .identity-banner h1 { font-size: 13px; }
   .layout { grid-template-columns: 1fr; }
   .pane-tree { border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; }
 }

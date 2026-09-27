@@ -70,19 +70,6 @@ ${styleTag}
 <body class="${options.bodyClass ?? 'storyteller'}">
 <div id="app" class="app" data-state="loading">
   <header id="toolbar" class="toolbar"></header>
-  <section class="identity-banner" aria-label="Architecture Storyteller project banner">
-    <h1>Architecture Storyteller 2.0 &amp; Ripple-Agent</h1>
-    <p>
-      Multi-agent architecture intelligence for AST ripple analysis, semantic impact mapping,
-      and security-conscious local tooling.
-    </p>
-    <ul class="identity-pills" aria-label="Core capabilities">
-      <li>Multi-Agent Workflow</li>
-      <li>Polyglot AST &amp; Ripple Analysis</li>
-      <li>Semantic Impact Mapping</li>
-      <li>Hardened Localhost Tooling</li>
-    </ul>
-  </section>
   <div id="banner" class="banner" hidden></div>
   <main class="layout">
     <section id="tree-pane" class="pane pane-tree" aria-label="Repository tree"><div class="empty">Starting the architecture map...</div></section>
