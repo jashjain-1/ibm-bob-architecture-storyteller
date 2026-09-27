@@ -1,9 +1,9 @@
-# 🏛️ Architecture Storyteller 2.0 & Ripple-Agent
+#  Architecture Storyteller 2.0 & Ripple-Agent
 > **Unified Polyglot Architecture Navigator, Interactive Mindmap, Impact Synthesizer & Publication Dossier Engine for VS Code & IBM Bob IDE**
 
 ---
 
-## ⚡ Executive Summary
+##  Executive Summary
 
 **Architecture Storyteller 2.0** transforms complex polyglot software repositories into living, interactive architectural models. It replaces fragmented reverse-engineering scripts and heavyweight IDE extensions with a **single, long-lived Python architecture engine** communicating over high-speed localhost HTTP with a modular **VS Code / IBM Bob extension**.
 
@@ -16,7 +16,7 @@ Every view across hovers, mindmaps, dossiers, and dependency badges is **guarant
 
 ---
 
-## 🧠 System Mindmap
+##  System Mindmap
 
 ```mermaid
 mindmap
@@ -50,7 +50,7 @@ mindmap
 
 ---
 
-## 🏗️ System Architecture & Workflow
+##  System Architecture & Workflow
 
 ```mermaid
 flowchart TD
@@ -111,7 +111,7 @@ flowchart TD
 
 ---
 
-## 🌊 Ripple-Agent Deep Dive
+##  Ripple-Agent Deep Dive
 
 The **Ripple-Agent** leverages IBM Bob's multi-agent orchestration principles to provide instant feedback whenever code is touched:
 
@@ -174,7 +174,7 @@ sequenceDiagram
 
 ---
 
-## 🔒 Security Hardening & Penetration Defense
+##  Security Hardening & Penetration Defense
 
 The repository has undergone an exhaustive defensive penetration audit and vulnerability remediation:
 
@@ -191,7 +191,7 @@ The repository has undergone an exhaustive defensive penetration audit and vulne
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```
 .
@@ -325,7 +325,7 @@ python tools/storyteller-engine/cli.py serve --port 8003
 
 ---
 
-## 🧪 Verification & Acceptance Test Results
+##  Verification & Acceptance Test Results
 
 All test suites pass with 100% success rate:
 
@@ -345,7 +345,7 @@ cd vscode-extension && npm run compile
 
 ---
 
-## 👥 Contributors & Collaborators
+##  Contributors & Collaborators
 
 - **Jash Jain** (`jashjain-1`)
 - **Harsh Mange** (`yellowducksys`)
