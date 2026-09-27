@@ -1,4 +1,16 @@
-# Architecture Storyteller 2.0 & Ripple-Agent
+<div align="center">
+  <h1>Architecture Storyteller 2.0 &amp; Ripple-Agent</h1>
+  <p>
+    Multi-agent architecture intelligence for AST ripple analysis, semantic impact mapping,
+    and security-conscious local tooling.
+  </p>
+  <p>
+    <code>Multi-Agent Workflow</code>
+    <code>Polyglot AST &amp; Ripple Analysis</code>
+    <code>Semantic Impact Mapping</code>
+    <code>Hardened Localhost Tooling</code>
+  </p>
+</div>
 
 ## 🏆 Official Repository & Hackathon Submission
 - **Primary GitHub Repository:** [https://github.com/jashjain-1/ibm-bob-architecture-storyteller](https://github.com/jashjain-1/ibm-bob-architecture-storyteller)
